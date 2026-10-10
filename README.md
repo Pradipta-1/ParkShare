@@ -95,6 +95,15 @@ npm install
 
 ### Running Locally
 
+**Option A: Start Both Services Simultaneously (Recommended)**
+From the repository root, start both the Express API and Vite frontend concurrently:
+```bash
+npm run dev
+# Starts Backend (http://localhost:5000) and Frontend (http://localhost:5173) together
+```
+
+**Option B: Start Services Individually**
+
 1. **Start the Backend Server (Port 5000):**
 ```bash
 cd server
