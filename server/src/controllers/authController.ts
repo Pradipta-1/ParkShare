@@ -131,6 +131,7 @@ export const updateProfile = (req: AuthenticatedRequest, res: Response): void =>
     if (email && email.trim()) userInStore.email = email.trim();
     if (typeof walletBalance === 'number') userInStore.walletBalance = walletBalance;
   }
+  dbStore.saveUser(userInStore || currentUser);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...userWithoutPass } = currentUser;

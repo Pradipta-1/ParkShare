@@ -172,7 +172,7 @@ export const Navbar: React.FC = () => {
                       className="fixed inset-0 z-40"
                       onClick={() => setShowNotifMenu(false)}
                     />
-                    <div className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border shadow-2xl z-50 overflow-hidden ${
+                    <div className={`fixed left-3 right-3 sm:left-auto sm:right-0 sm:absolute top-16 sm:top-full mt-2 sm:w-96 max-w-md mx-auto sm:mx-0 rounded-2xl border shadow-2xl z-50 overflow-hidden ${
                       isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-slate-900/10'
                     }`}>
                       <div className={`p-3.5 border-b flex items-center justify-between ${
@@ -195,28 +195,45 @@ export const Navbar: React.FC = () => {
                         </Link>
                       </div>
                       <div className={`max-h-80 overflow-y-auto divide-y ${isDark ? 'divide-slate-800/50' : 'divide-slate-100'}`}>
-                        {notifications.slice(0, 4).map((notif) => (
-                          <div
-                            key={notif.id}
-                            onClick={() => markAsRead(notif.id)}
-                            className={`p-3 text-xs cursor-pointer transition-colors flex items-start gap-2.5 ${
-                              isDark
-                                ? notif.read ? 'hover:bg-slate-800/50' : 'bg-slate-800/20 hover:bg-slate-800/50'
-                                : notif.read ? 'hover:bg-slate-50' : 'bg-slate-50/80 hover:bg-slate-100'
-                            }`}
-                          >
-                            <div
-                              className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                                !notif.read ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-slate-400'
-                              }`}
-                            />
-                            <div className="flex-1">
-                              <p className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{notif.title}</p>
-                              <p className={`mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
-                              <span className="text-[10px] text-slate-500 mt-1 block">{notif.dateGroup}</span>
-                            </div>
+                        {notifications.length === 0 ? (
+                          <div className={`p-6 text-center text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            No new notifications
                           </div>
-                        ))}
+                        ) : (
+                          notifications.slice(0, 4).map((notif) => {
+                            const isUnread = !notif.read && !(notif as any).isRead;
+                            return (
+                              <div
+                                key={notif.id}
+                                onClick={() => {
+                                  markAsRead(notif.id);
+                                  setShowNotifMenu(false);
+                                  if (notif.link) {
+                                    navigate(notif.link);
+                                  } else if (notif.conversationId) {
+                                    navigate(`/messages?bookingId=${notif.conversationId}`);
+                                  }
+                                }}
+                                className={`p-3 text-xs cursor-pointer transition-colors flex items-start gap-2.5 ${
+                                  isDark
+                                    ? !isUnread ? 'hover:bg-slate-800/50' : 'bg-slate-800/20 hover:bg-slate-800/50'
+                                    : !isUnread ? 'hover:bg-slate-50' : 'bg-slate-50/80 hover:bg-slate-100'
+                                }`}
+                              >
+                                <div
+                                  className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                                    isUnread ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-slate-400'
+                                  }`}
+                                />
+                                <div className="flex-1">
+                                  <p className={`font-medium ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{notif.title}</p>
+                                  <p className={`mt-0.5 line-clamp-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
+                                  <span className="text-[10px] text-slate-500 mt-1 block">{notif.dateGroup || 'Today'}</span>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                       <div className={`p-2.5 border-t text-center ${isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
                         <Link

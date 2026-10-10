@@ -50,6 +50,30 @@ export const initialUsers: User[] = [
     responseRate: '100%',
     walletBalance: 0,
   },
+  {
+    id: 'usr_driver_pooja',
+    name: 'Pooja Das',
+    email: 'pooja@parkshare.com',
+    password: 'password123',
+    role: 'driver',
+    phone: '+91 98741 88990',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    memberSince: 'April 2023',
+    responseRate: '98%',
+    walletBalance: 0,
+  },
+  {
+    id: 'usr_driver_amit',
+    name: 'Amit Mukherjee',
+    email: 'amit@parkshare.com',
+    password: 'password123',
+    role: 'driver',
+    phone: '+91 98310 11223',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    memberSince: 'February 2024',
+    responseRate: '95%',
+    walletBalance: 0,
+  },
 ];
 
 export const initialVehicles: Vehicle[] = [];

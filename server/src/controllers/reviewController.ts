@@ -77,8 +77,8 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
       date: 'Just now',
       createdAt: new Date().toISOString(),
     };
-    dbStore.saveReview(newReview);
   }
+  dbStore.saveReview(newReview);
 
   // Update parking average rating and review count in dbStore
   let updatedParking: any = null;
@@ -160,6 +160,7 @@ export const respondToReview = (req: AuthenticatedRequest, res: Response): void 
   }
 
   review.ownerResponse = responseText;
+  dbStore.saveReview(review);
   res.json({
     success: true,
     message: 'Response added to review',

@@ -84,6 +84,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     if (userInStore) {
       userInStore.walletBalance = Math.max(0, (userInStore.walletBalance || 0) - totalAmount);
       user.walletBalance = userInStore.walletBalance;
+      dbStore.saveUser(userInStore);
     }
   }
 
@@ -91,6 +92,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
   const ownerInStore = dbStore.users.find((u) => u.id === effectiveOwnerId || u.role === 'owner');
   if (ownerInStore) {
     ownerInStore.walletBalance = (ownerInStore.walletBalance || 0) + subtotal;
+    dbStore.saveUser(ownerInStore);
   }
 
   const newBooking: Booking = {
@@ -153,7 +155,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     read: false,
     createdAt: new Date().toISOString(),
   };
-  dbStore.notifications.unshift(userNotif);
+  dbStore.saveNotification(userNotif);
 
   // Send notification to owner
   const ownerNotif: NotificationItem = {
@@ -166,7 +168,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     read: false,
     createdAt: new Date().toISOString(),
   };
-  dbStore.notifications.unshift(ownerNotif);
+  dbStore.saveNotification(ownerNotif);
 
   // Send notification to platform admin
   const adminNotif: NotificationItem = {
@@ -179,7 +181,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     read: false,
     createdAt: new Date().toISOString(),
   };
-  dbStore.notifications.unshift(adminNotif);
+  dbStore.saveNotification(adminNotif);
 
   res.status(201).json({
     success: true,
@@ -336,7 +338,7 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
   }
 
   // Add refund notification
-  dbStore.notifications.unshift({
+  dbStore.saveNotification({
     id: `notif_${uuidv4().substring(0, 8)}`,
     userId: booking.userId,
     type: 'refund',
@@ -368,6 +370,7 @@ export const checkInBooking = (req: AuthenticatedRequest, res: Response): void =
 
   booking.bookingStatus = 'active';
   booking.checkInTime = timeStr;
+  dbStore.saveBooking(booking);
 
   res.json({
     success: true,
@@ -397,6 +400,7 @@ export const checkOutBooking = (req: AuthenticatedRequest, res: Response): void 
 
   booking.bookingStatus = 'completed';
   booking.checkOutTime = timeStr;
+  dbStore.saveBooking(booking);
 
   // Restore the parking spot once vehicle checks out
   const parking = dbStore.parkingSpaces.find((p) => p.id === booking.parkingId);
@@ -407,6 +411,7 @@ export const checkOutBooking = (req: AuthenticatedRequest, res: Response): void 
       parking.status = 'active';
     }
     parking.occupancyPercent = Math.max(0, Math.round(((total - parking.availableSpots) / total) * 100));
+    dbStore.saveParkingSpace(parking);
   }
 
   res.json({

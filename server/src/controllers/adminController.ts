@@ -310,9 +310,10 @@ export const resetUserKey = (req: Request, res: Response): void => {
 
   const generatedKey = tempKey || `PS-SEC-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
   (user as any).temporaryKey = generatedKey;
+  dbStore.saveUser(user);
 
   // Add high-priority security alert notification to user's account
-  dbStore.notifications.unshift({
+  dbStore.saveNotification({
     id: `notif_${Date.now()}`,
     userId: user.id,
     type: 'general',
@@ -347,12 +348,13 @@ export const updateAdminUser = (req: Request, res: Response): void => {
   if (phone) user.phone = phone;
   if (typeof walletBalance === 'number') user.walletBalance = walletBalance;
   if (status) (user as any).status = status;
+  dbStore.saveUser(user);
 
   const diff = typeof walletBalance === 'number' ? walletBalance - oldBalance : 0;
   const balanceMsg = diff !== 0 ? ` Wallet ${diff > 0 ? `credited with ₹${diff}` : `adjusted by ₹${diff}`} (New balance: ₹${user.walletBalance}).` : '';
 
   // Add notification to target user's account
-  dbStore.notifications.unshift({
+  dbStore.saveNotification({
     id: `notif_${Date.now()}`,
     userId: user.id,
     type: diff > 0 ? ('refund' as const) : ('general' as const),
@@ -379,10 +381,8 @@ export const deleteAdminUser = (req: Request, res: Response): void => {
   }
 
   const deletedUser = dbStore.users[index];
-  dbStore.users.splice(index, 1);
-
-  // Also clear any unread notifications for this user
-  dbStore.notifications = dbStore.notifications.filter((n) => n.userId !== id);
+  dbStore.deleteUser(id);
+  dbStore.clearNotificationsForUser([id]);
 
   res.json({
     success: true,

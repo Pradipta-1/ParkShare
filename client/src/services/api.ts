@@ -42,6 +42,17 @@ class ApiService {
     }
 
     try {
+      const userStr = localStorage.getItem('parkshare_user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        if (u?.role) headers['X-User-Role'] = u.role;
+        if (u?.id) headers['X-User-Id'] = u.id;
+      }
+    } catch {
+      // Ignore
+    }
+
+    try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         headers,
@@ -613,16 +624,42 @@ class ApiService {
     });
   }
 
+  async deleteNotification(id: string) {
+    return this.request<{ success: boolean; message: string }>(`/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearAllNotifications() {
+    return this.request<{ success: boolean; message: string }>('/notifications', {
+      method: 'DELETE',
+    });
+  }
+
   // Messaging
+  async getConversations() {
+    return this.request<{ success: boolean; count: number; data: any[] }>('/messages/conversations');
+  }
+
   async getMessages(bookingId: string) {
     return this.request<{ success: boolean; bookingContext: any; data: MessageItem[] }>(`/messages/${bookingId}`);
   }
 
-  async sendMessage(bookingId: string, text: string, receiverId?: string) {
-    return this.request<{ success: boolean; data: MessageItem }>('/messages', {
+  async sendMessage(bookingId: string, text: string, receiverId?: string, conversationId?: string) {
+    const res = await this.request<{ success: boolean; data: MessageItem; notification?: any }>('/messages', {
       method: 'POST',
-      body: JSON.stringify({ bookingId, text, receiverId }),
+      body: JSON.stringify({ bookingId, text, receiverId, conversationId }),
     });
+    if (res.success) {
+      try {
+        window.dispatchEvent(new CustomEvent('parkshare_notification_added', { detail: res.notification }));
+        window.dispatchEvent(new CustomEvent('parkshare_message_received', { detail: res.data }));
+        localStorage.setItem('parkshare_last_msg', Date.now().toString());
+      } catch {
+        // Ignore
+      }
+    }
+    return res;
   }
 
   // Owner

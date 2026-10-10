@@ -132,28 +132,25 @@ class DataStore {
       }
 
       // 7. Messages (In-App Driver & Host Chat)
-      const msgCount = await MessageModel.countDocuments();
-      if (msgCount === 0) {
-        if (initialMessages.length > 0) await MessageModel.insertMany(initialMessages);
-      } else {
-        const dbMsgs = await MessageModel.find().lean();
-        this.messages = dbMsgs.map((m: any) => ({
-          ...m,
-          id: m.id || m._id?.toString(),
-        })) as MessageItem[];
-      }
+      // 7. Messages (In-App Driver & Host Chat) - Real-time messages only
+      await MessageModel.deleteMany({
+        id: { $in: ['msg_rahul_1', 'msg_pooja_1', 'msg_amit_1', 'msg_vikram_1'] },
+      }).catch(() => {});
+      const dbMsgs = await MessageModel.find().lean();
+      this.messages = dbMsgs.map((m: any) => ({
+        ...m,
+        id: m.id || m._id?.toString(),
+      })) as MessageItem[];
 
       // 8. Notifications (System & Activity Alerts)
-      const notifCount = await NotificationModel.countDocuments();
-      if (notifCount === 0) {
-        if (initialNotifications.length > 0) await NotificationModel.insertMany(initialNotifications);
-      } else {
-        const dbNotifs = await NotificationModel.find().lean();
-        this.notifications = dbNotifs.map((n: any) => ({
-          ...n,
-          id: n.id || n._id?.toString(),
-        })) as NotificationItem[];
-      }
+      await NotificationModel.deleteMany({
+        id: { $in: ['notif_init_msg_1', 'notif_init_msg_2', 'notif_init_msg_3', 'notif_init_msg_4'] },
+      }).catch(() => {});
+      const dbNotifs = await NotificationModel.find().lean();
+      this.notifications = dbNotifs.map((n: any) => ({
+        ...n,
+        id: n.id || n._id?.toString(),
+      })) as NotificationItem[];
 
       // 9. Payouts (Host Earnings & Bank Withdrawals)
       const payoutCount = await PayoutModel.countDocuments();
@@ -207,6 +204,15 @@ class DataStore {
     if (this.isMongoConnected) {
       UserModel.findOneAndUpdate({ id: user.id }, user, { upsert: true }).catch((e) =>
         console.error('Mongo saveUser error:', e.message)
+      );
+    }
+  }
+
+  public deleteUser(id: string) {
+    this.users = this.users.filter((u) => u.id !== id);
+    if (this.isMongoConnected) {
+      UserModel.deleteOne({ id }).catch((e) =>
+        console.error('Mongo deleteUser error:', e.message)
       );
     }
   }
@@ -314,6 +320,24 @@ class DataStore {
     if (this.isMongoConnected) {
       NotificationModel.findOneAndUpdate({ id: notif.id }, notif, { upsert: true }).catch((e) =>
         console.error('Mongo saveNotification error:', e.message)
+      );
+    }
+  }
+
+  public deleteNotification(id: string) {
+    this.notifications = this.notifications.filter((n) => n.id !== id);
+    if (this.isMongoConnected) {
+      NotificationModel.deleteOne({ id }).catch((e) =>
+        console.error('Mongo deleteNotification error:', e.message)
+      );
+    }
+  }
+
+  public clearNotificationsForUser(userIds: string[]) {
+    this.notifications = this.notifications.filter((n) => !userIds.includes(n.userId));
+    if (this.isMongoConnected) {
+      NotificationModel.deleteMany({ userId: { $in: userIds } }).catch((e) =>
+        console.error('Mongo clearNotifications error:', e.message)
       );
     }
   }

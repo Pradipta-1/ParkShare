@@ -1,10 +1,12 @@
 import { Router } from 'express';
-import { getMessagesByBooking, sendMessage } from '../controllers/messageController.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { getConversations, getMessagesByBooking, sendMessage } from '../controllers/messageController.js';
+import { optionalAuthenticate } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-router.get('/:bookingId', authenticate, getMessagesByBooking);
-router.post('/', authenticate, sendMessage);
+// Conversations list endpoint must come before :bookingId param
+router.get('/conversations', optionalAuthenticate, getConversations);
+router.get('/:bookingId', optionalAuthenticate, getMessagesByBooking);
+router.post('/', optionalAuthenticate, sendMessage);
 
 export default router;

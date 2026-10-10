@@ -8,6 +8,8 @@ interface NotificationContextType {
   unreadCount: number;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteNotification: (id: string) => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
   addNotification: (
     item: Omit<NotificationItem, 'id' | 'createdAt' | 'read'> & {
@@ -53,11 +55,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       // Filter for active user if logged in
       const forUser = user
-        ? combined.filter((n) => n.userId === user.id || (user.role === 'owner' && n.userId === 'usr_owner_1') || (user.role === 'driver' && n.userId === 'usr_driver_1'))
+        ? combined.filter((n) => n.userId === user.id || (user.role === 'owner' && n.userId === 'usr_owner_1') || (user.role === 'driver' && n.userId === 'usr_driver_1') || (user.role === 'admin' && n.userId === 'usr_admin_1'))
         : combined;
 
-      setNotifications(forUser);
-      setUnreadCount(forUser.filter((n) => !n.read).length);
+      const normalized = forUser.map((n) => ({
+        ...n,
+        read: Boolean(n.read || (n as any).isRead),
+        isRead: Boolean(n.read || (n as any).isRead),
+      }));
+
+      setNotifications(normalized);
+      setUnreadCount(normalized.filter((n) => !n.read).length);
     } catch {
       // Fallback local only
       try {
@@ -65,10 +73,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           localStorage.getItem('parkshare_custom_notifications') || '[]'
         );
         const forUser = user
-          ? localNotifs.filter((n) => n.userId === user.id || (user.role === 'owner' && n.userId === 'usr_owner_1') || (user.role === 'driver' && n.userId === 'usr_driver_1'))
+          ? localNotifs.filter((n) => n.userId === user.id || (user.role === 'owner' && n.userId === 'usr_owner_1') || (user.role === 'driver' && n.userId === 'usr_driver_1') || (user.role === 'admin' && n.userId === 'usr_admin_1'))
           : localNotifs;
-        setNotifications(forUser);
-        setUnreadCount(forUser.filter((n) => !n.read).length);
+        const normalized = forUser.map((n) => ({
+          ...n,
+          read: Boolean(n.read || (n as any).isRead),
+          isRead: Boolean(n.read || (n as any).isRead),
+        }));
+        setNotifications(normalized);
+        setUnreadCount(normalized.filter((n) => !n.read).length);
       } catch {
         // Ignore
       }
@@ -77,6 +90,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   useEffect(() => {
     refreshNotifications();
+
+    const handleEvent = () => {
+      refreshNotifications();
+    };
+
+    window.addEventListener('parkshare_notification_added', handleEvent);
+    window.addEventListener('parkshare_message_received', handleEvent);
+    window.addEventListener('storage', handleEvent);
+
+    return () => {
+      window.removeEventListener('parkshare_notification_added', handleEvent);
+      window.removeEventListener('parkshare_message_received', handleEvent);
+      window.removeEventListener('storage', handleEvent);
+    };
   }, [refreshNotifications]);
 
   const addNotification = (
@@ -154,6 +181,47 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
+  const deleteNotification = async (id: string) => {
+    const target = notifications.find((n) => n.id === id);
+    if (target && !target.read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+    try {
+      const stored: NotificationItem[] = JSON.parse(
+        localStorage.getItem('parkshare_custom_notifications') || '[]'
+      );
+      const updated = stored.filter((n) => n.id !== id);
+      localStorage.setItem('parkshare_custom_notifications', JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+
+    try {
+      await api.deleteNotification(id);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    setNotifications([]);
+    setUnreadCount(0);
+
+    try {
+      localStorage.removeItem('parkshare_custom_notifications');
+    } catch {
+      // Ignore
+    }
+
+    try {
+      await api.clearAllNotifications();
+    } catch {
+      // Ignore
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -161,6 +229,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         unreadCount,
         markAsRead,
         markAllAsRead,
+        deleteNotification,
+        clearAllNotifications,
         refreshNotifications,
         addNotification,
       }}

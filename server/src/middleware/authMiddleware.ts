@@ -12,6 +12,23 @@ export interface AuthenticatedRequest extends Request {
 export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check if x-user-role or x-user-id header is provided for demo / dev role switching
+    const roleHeader = (req.headers['x-user-role'] as string) || (req.query.role as string);
+    const userIdHeader = (req.headers['x-user-id'] as string) || (req.query.userId as string);
+    if (userIdHeader) {
+      const found = dbStore.users.find((u) => u.id === userIdHeader);
+      if (found) {
+        req.user = found;
+        return next();
+      }
+    }
+    if (roleHeader) {
+      const found = dbStore.users.find((u) => u.role === roleHeader);
+      if (found) {
+        req.user = found;
+        return next();
+      }
+    }
     res.status(401).json({ success: false, message: 'Authorization token required' });
     return;
   }
@@ -68,10 +85,29 @@ export const optionalAuthenticate = (req: AuthenticatedRequest, _res: Response, 
         return next();
       }
     } catch {
-      // Fallback to demo user
+      // Fallback
     }
   }
-  // Allow demo owner user fallback
+
+  // Check headers
+  const roleHeader = (req.headers['x-user-role'] as string) || (req.query.role as string);
+  const userIdHeader = (req.headers['x-user-id'] as string) || (req.query.userId as string);
+  if (userIdHeader) {
+    const found = dbStore.users.find((u) => u.id === userIdHeader);
+    if (found) {
+      req.user = found;
+      return next();
+    }
+  }
+  if (roleHeader) {
+    const found = dbStore.users.find((u) => u.role === roleHeader);
+    if (found) {
+      req.user = found;
+      return next();
+    }
+  }
+
+  // Allow fallback
   req.user = dbStore.users.find((u) => u.role === 'owner') || dbStore.users[0];
   next();
 };

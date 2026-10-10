@@ -153,12 +153,16 @@ export interface NotificationItem {
 export interface MessageItem {
   id: string;
   bookingId: string;
+  conversationId?: string;
   senderId: string;
   senderName: string;
   senderRole: 'driver' | 'owner' | 'admin';
   receiverId: string;
   text: string;
+  messageText?: string;
   timestamp: string;
+  isRead?: boolean;
+  createdAt?: string;
 }
 
 export interface PayoutItem {

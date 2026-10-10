@@ -33,7 +33,8 @@ function MainLayout() {
   const { theme } = useTheme();
   const isLoginPage = location.pathname === '/login';
   const isLandingPage = location.pathname === '/';
-  const hideFooter = isLoginPage || location.pathname === '/add-space';
+  const isMessagingPage = location.pathname === '/messages';
+  const hideFooter = isLoginPage || location.pathname === '/add-space' || isMessagingPage;
 
   return (
     <div
@@ -44,7 +45,7 @@ function MainLayout() {
       {/* Hide Header on Login Page */}
       {!isLoginPage && <Navbar />}
 
-      <div className={`flex-1 ${isLoginPage || isLandingPage ? '' : 'pb-20 md:pb-0'}`}>
+      <div className={`flex-1 ${isLoginPage || isLandingPage || isMessagingPage ? '' : 'pb-20 md:pb-0'}`}>
         <Routes>
           {/* Public Pages */}
           <Route path="/" element={<LandingPage />} />

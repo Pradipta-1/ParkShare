@@ -125,23 +125,30 @@ export interface Review {
 export interface NotificationItem {
   id: string;
   userId: string;
-  type: 'booking_confirmed' | 'booking_ending' | 'refund' | 'review' | 'verification' | 'general';
+  type: 'booking_confirmed' | 'booking_ending' | 'refund' | 'review' | 'verification' | 'message' | 'general';
   title: string;
   message: string;
   dateGroup: 'Today' | 'Yesterday' | 'Earlier this week' | 'Older';
   read: boolean;
+  isRead?: boolean;
+  link?: string;
+  conversationId?: string;
   createdAt: string;
 }
 
 export interface MessageItem {
   id: string;
   bookingId: string;
+  conversationId?: string;
   senderId: string;
   senderName: string;
   senderRole: 'driver' | 'owner' | 'admin';
   receiverId: string;
   text: string;
+  messageText?: string;
   timestamp: string;
+  isRead?: boolean;
+  createdAt?: string;
 }
 
 export interface VerificationRequestItem {

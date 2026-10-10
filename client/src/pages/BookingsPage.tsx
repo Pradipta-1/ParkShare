@@ -354,7 +354,7 @@ export const BookingsPage: React.FC = () => {
                     )}
 
                     <Link
-                      to="/messages"
+                      to={`/messages?bookingId=${b.id}`}
                       className="p-2 sm:px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer flex items-center justify-center gap-1.5 text-xs"
                       title="Chat Host"
                     >

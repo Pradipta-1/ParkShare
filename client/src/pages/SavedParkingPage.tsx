@@ -2,9 +2,11 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bookmark, Star, MapPin, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useFavorites } from '../context/FavoritesContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const SavedParkingPage: React.FC = () => {
   const { favoriteSpaces, toggleFavorite } = useFavorites();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   return (
@@ -13,7 +15,11 @@ export const SavedParkingPage: React.FC = () => {
       <div>
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold transition-all group shadow-sm"
+          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all group shadow-sm border ${
+            isDark
+              ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800 hover:border-emerald-500/40'
+              : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200'
+          }`}
         >
           <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
           <span>Back to Overview Hub</span>
@@ -22,32 +28,36 @@ export const SavedParkingPage: React.FC = () => {
 
       {/* Header */}
       <div>
-        <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+        <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
           Bookmarks
         </span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-0.5">
+        <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
           Saved Parking Spaces
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
+        <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
           Your bookmarked lots, driveways and garages for instant 1-click reservations.
         </p>
       </div>
 
       {favoriteSpaces.length === 0 ? (
         // Empty State (Requirement 39)
-        <div className="p-16 rounded-3xl bg-slate-900/60 border border-slate-800 text-center space-y-4 max-w-md mx-auto my-12">
-          <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500 mx-auto">
+        <div className={`p-16 rounded-3xl border text-center space-y-4 max-w-md mx-auto my-12 ${
+          isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-slate-900/5'
+        }`}>
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto ${
+            isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'
+          }`}>
             <Bookmark className="w-7 h-7" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">No saved parking</h3>
-            <p className="text-xs text-slate-400 mt-1">
+            <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>No saved parking</h3>
+            <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Save your favorite parking spaces here for rapid rebooking.
             </p>
           </div>
           <Link
             to="/find"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20"
           >
             <span>Explore Parking</span>
             <ArrowRight className="w-4 h-4" />
@@ -58,7 +68,9 @@ export const SavedParkingPage: React.FC = () => {
           {favoriteSpaces.map((parking) => (
             <div
               key={parking.id}
-              className="p-4 rounded-3xl bg-[#0f172a] border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between space-y-4"
+              className={`p-4 rounded-3xl border transition-all flex flex-col justify-between space-y-4 ${
+                isDark ? 'bg-[#0f172a] border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+              }`}
             >
               <div className="space-y-3">
                 <div className="relative h-44 rounded-2xl overflow-hidden bg-slate-900">
@@ -77,20 +89,22 @@ export const SavedParkingPage: React.FC = () => {
 
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <h3 className="font-bold text-white text-base line-clamp-1">{parking.title}</h3>
+                    <h3 className={`font-bold text-base line-clamp-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>{parking.title}</h3>
                     <div className="flex items-center gap-1 text-xs text-amber-400 shrink-0 font-bold">
                       <Star className="w-3.5 h-3.5 fill-amber-400" />
                       <span>{parking.rating}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400 flex items-center gap-1 mt-1 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <p className={`text-xs flex items-center gap-1 mt-1 truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     {parking.address}
                   </p>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+              <div className={`pt-3 border-t flex items-center justify-between gap-2 ${
+                isDark ? 'border-slate-800/80' : 'border-slate-100'
+              }`}>
                 <button
                   type="button"
                   onClick={() => toggleFavorite(parking)}
@@ -115,3 +129,4 @@ export const SavedParkingPage: React.FC = () => {
     </div>
   );
 };
+

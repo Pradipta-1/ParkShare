@@ -34,6 +34,7 @@ export const addVehicle = (req: AuthenticatedRequest, res: Response): void => {
       .filter((v) => v.userId === user.id)
       .forEach((v) => {
         v.isDefault = false;
+        dbStore.saveVehicle(v);
       });
   }
 
