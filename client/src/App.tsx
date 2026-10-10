@@ -25,6 +25,7 @@ import { AvailabilityCalendarPage } from './pages/AvailabilityCalendarPage';
 import { EarningsPage } from './pages/EarningsPage';
 import { AdminPanelPage } from './pages/AdminPanelPage';
 import { LoginPage } from './pages/LoginPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function MainLayout() {
@@ -68,6 +69,9 @@ function MainLayout() {
 
           {/* Admin Workflow */}
           <Route path="/admin" element={<AdminPanelPage />} />
+
+          {/* Account Profile & Settings (All Roles: Driver, Owner, Admin) */}
+          <Route path="/settings" element={<SettingsPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<NotFoundPage />} />

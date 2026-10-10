@@ -12,6 +12,8 @@ export interface User {
   walletBalance: number;
   status?: string;
   temporaryKey?: string;
+  bio?: string;
+  city?: string;
 }
 
 export type ParkingType = 'Open' | 'Covered' | 'Garage' | 'Basement' | 'Driveway';

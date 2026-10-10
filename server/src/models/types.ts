@@ -11,6 +11,8 @@ export interface User {
   memberSince: string;
   responseRate?: string;
   walletBalance: number;
+  bio?: string;
+  city?: string;
 }
 
 export interface Vehicle {

@@ -40,13 +40,14 @@ import {
   HelpCircle,
   Award,
   Trash2,
+  Settings,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { VerificationRequestItem, ReportItem, User } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 
 const DEFAULT_USERS: User[] = [
   {
@@ -657,6 +658,17 @@ export const AdminPanelPage: React.FC = () => {
               </span>
             )}
           </button>
+          <Link
+            to="/settings"
+            className={`px-3 py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5 text-center cursor-pointer ${
+              isDark
+                ? 'text-slate-400 hover:text-white hover:bg-slate-800/60 font-semibold'
+                : 'text-slate-700 hover:text-slate-950 hover:bg-white/70 font-bold'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5 text-purple-400" />
+            <span>Profile & Settings</span>
+          </Link>
         </div>
       </div>
 

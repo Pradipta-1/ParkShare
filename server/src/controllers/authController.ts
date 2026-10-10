@@ -110,15 +110,31 @@ export const updateProfile = (req: AuthenticatedRequest, res: Response): void =>
     return;
   }
 
-  const { name, phone, avatar } = req.body;
-  if (name) req.user.name = name;
-  if (phone) req.user.phone = phone;
-  if (avatar) req.user.avatar = avatar;
+  const currentUser = req.user;
+  const { name, phone, avatar, bio, city, email } = req.body;
+  if (name && name.trim()) currentUser.name = name.trim();
+  if (phone !== undefined) currentUser.phone = phone.trim();
+  if (avatar && avatar.trim()) currentUser.avatar = avatar.trim();
+  if (bio !== undefined) currentUser.bio = bio.trim();
+  if (city !== undefined) currentUser.city = city.trim();
+  if (email && email.trim()) currentUser.email = email.trim();
+
+  // Sync with in-memory store
+  const userInStore = dbStore.users.find((u) => u.id === currentUser.id);
+  if (userInStore) {
+    if (name && name.trim()) userInStore.name = name.trim();
+    if (phone !== undefined) userInStore.phone = phone.trim();
+    if (avatar && avatar.trim()) userInStore.avatar = avatar.trim();
+    if (bio !== undefined) userInStore.bio = bio.trim();
+    if (city !== undefined) userInStore.city = city.trim();
+    if (email && email.trim()) userInStore.email = email.trim();
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password: _, ...userWithoutPass } = req.user;
+  const { password: _, ...userWithoutPass } = currentUser;
   res.json({
     success: true,
+    message: 'Profile updated successfully',
     user: userWithoutPass,
   });
 };

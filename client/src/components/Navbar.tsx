@@ -23,11 +23,13 @@ import {
   DollarSign,
   Building,
   Repeat,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
+import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { UserRole } from '../types';
 
 export const Navbar: React.FC = () => {
@@ -37,6 +39,7 @@ export const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,7 +98,8 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header
+    <>
+      <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         isDark
           ? isScrolled
@@ -279,15 +283,31 @@ export const Navbar: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="pt-1">
+                      <div className="pt-1 space-y-0.5">
+                        <Link
+                          to="/settings"
+                          onClick={() => setShowUserMenu(false)}
+                          className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold transition-colors text-left cursor-pointer ${
+                            isDark ? 'text-slate-200 hover:bg-slate-800 hover:text-white' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Settings className="w-4 h-4 text-emerald-500" />
+                            <span>Profile Settings</span>
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            Edit
+                          </span>
+                        </Link>
+
                         <Link
                           to="/login"
                           onClick={() => setShowUserMenu(false)}
-                          className={`w-full flex items-center gap-2 px-4 py-2.5 text-xs transition-colors text-left ${
+                          className={`w-full flex items-center gap-2.5 px-4 py-2 text-xs transition-colors text-left ${
                             isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                           }`}
                         >
-                          <UserIcon className="w-4 h-4 text-emerald-500" /> Switch / Sign In Account
+                          <Repeat className="w-4 h-4 text-slate-400" /> Switch / Demo Roles
                         </Link>
                       </div>
 
@@ -539,30 +559,54 @@ export const Navbar: React.FC = () => {
                 Sign In / Switch Account
               </Link>
               {user && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    logout();
-                    navigate('/login');
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-                    isDark
-                      ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25'
-                      : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 shadow-xs'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                    <span>Sign Out</span>
-                  </span>
-                  <span className={`text-xs font-normal ${isDark ? 'text-rose-400/80' : 'text-rose-600/80'}`}>({user.name})</span>
-                </button>
+                <>
+                  <Link
+                    to="/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                      isDark
+                        ? 'text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-slate-800'
+                        : 'text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-200'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-emerald-500" />
+                      <span>Profile Settings</span>
+                    </span>
+                    <span className="text-xs text-emerald-500 font-bold">Edit</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      logout();
+                      navigate('/login');
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                      isDark
+                        ? 'text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25'
+                        : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 shadow-xs'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                      <span>Sign Out</span>
+                    </span>
+                    <span className={`text-xs font-normal ${isDark ? 'text-rose-400/80' : 'text-rose-600/80'}`}>({user.name})</span>
+                  </button>
+                </>
               )}
             </div>
           </div>
         )}
       </div>
     </header>
-  );
+
+    <ProfileSettingsModal
+      isOpen={showSettingsModal}
+      onClose={() => setShowSettingsModal(false)}
+    />
+  </>
+);
 };

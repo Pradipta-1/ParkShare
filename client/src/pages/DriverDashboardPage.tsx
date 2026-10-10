@@ -27,6 +27,7 @@ import {
   Check,
   RotateCcw,
   CreditCard,
+  Settings,
 } from 'lucide-react';
 import { LiveTimer } from '../components/LiveTimer';
 import { useAuth } from '../context/AuthContext';
@@ -262,6 +263,17 @@ export const DriverDashboardPage: React.FC = () => {
                       {notifications.filter((n) => !n.read).length} new
                     </span>
                   )}
+                </Link>
+
+                <Link
+                  to="/settings"
+                  className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <Settings className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                    <span>Profile & Settings</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </nav>
             </div>
