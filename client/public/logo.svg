@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <defs>
+    <linearGradient id="ps-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <!-- Pin Body -->
+  <path d="M24 4C14.059 4 6 12.059 6 22c0 12.28 15.68 20.94 17.06 21.68a1.9 1.9 0 0 0 1.88 0C26.32 42.94 42 34.28 42 22 42 12.059 33.941 4 24 4Z" fill="url(#ps-grad)" />
+  <circle cx="24" cy="22" r="14" fill="#0b0f17" />
+  <!-- Letter P -->
+  <path d="M20 14h6.5c3.038 0 5.5 2.015 5.5 4.5S29.538 23 26.5 23H23.5v7H20V14Zm3.5 6h3c1.38 0 2.5-.672 2.5-1.5s-1.12-1.5-2.5-1.5h-3v3Z" fill="#10b981" />
+</svg>
