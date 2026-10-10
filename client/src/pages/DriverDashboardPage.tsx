@@ -245,7 +245,7 @@ export const DriverDashboardPage: React.FC = () => {
                     <span>Vehicles Garage</span>
                   </div>
                   <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[11px] font-bold text-slate-300 border border-slate-700">
-                    {vehicles.length || 2}
+                    {vehicles.length}
                   </span>
                 </Link>
 
@@ -257,9 +257,11 @@ export const DriverDashboardPage: React.FC = () => {
                     <Bell className="w-4 h-4 text-slate-400 group-hover:text-emerald-400 transition-colors" />
                     <span>Notifications</span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                    2 new
-                  </span>
+                  {notifications.filter((n) => !n.read).length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                      {notifications.filter((n) => !n.read).length} new
+                    </span>
+                  )}
                 </Link>
               </nav>
             </div>
@@ -286,7 +288,7 @@ export const DriverDashboardPage: React.FC = () => {
                     ParkShare Wallet Balance
                   </span>
                   <div className="text-3xl font-black text-white tracking-tight flex items-baseline gap-1 mt-0.5">
-                    <span>₹{user?.walletBalance ?? 450}</span>
+                    <span>₹{user?.walletBalance ?? 0}</span>
                     <span className="text-xs text-emerald-400 font-semibold font-sans">Active</span>
                   </div>
                 </div>
@@ -507,7 +509,7 @@ export const DriverDashboardPage: React.FC = () => {
                   Saved Spots
                 </span>
                 <div className="text-lg sm:text-2xl font-black text-white mt-1">
-                  {favoriteSpaces.length || 3}
+                  {favoriteSpaces.length}
                 </div>
                 <Link to="/saved" className="text-[10px] text-slate-400 hover:text-emerald-400 block mt-0.5">
                   Quick Re-reserve →
@@ -519,10 +521,10 @@ export const DriverDashboardPage: React.FC = () => {
                   Garage Vehicles
                 </span>
                 <div className="text-lg sm:text-2xl font-black text-white mt-1">
-                  {vehicles.length || 2}
+                  {vehicles.length}
                 </div>
                 <Link to="/vehicles" className="text-[10px] text-slate-400 hover:text-emerald-400 block mt-0.5 font-mono truncate">
-                  {vehicles[0]?.numberPlate || 'WB-02-AK-9821'}
+                  {vehicles[0]?.numberPlate || '+ Add Vehicle'}
                 </Link>
               </div>
             </div>
@@ -558,7 +560,7 @@ export const DriverDashboardPage: React.FC = () => {
                       ParkShare Wallet
                     </span>
                     <div className="text-2xl font-black text-white tracking-tight flex items-baseline gap-1.5 mt-0.5">
-                      <span>₹{user?.walletBalance ?? 450}</span>
+                      <span>₹{user?.walletBalance ?? 0}</span>
                       <span className="text-xs text-emerald-400 font-semibold font-sans">Active</span>
                     </div>
                   </div>

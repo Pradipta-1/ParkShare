@@ -10,49 +10,58 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
 
   const mySpaces = dbStore.parkingSpaces.filter((p) => p.ownerId === ownerId);
   const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
+  const myPayouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
 
-  const totalEarnings = 24860;
-  const todayEarnings = 1240;
-  const activeBookingsCount = myBookings.filter((b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed').length || 8;
+  const totalEarnings = myBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayEarnings = myBookings
+    .filter((b) => b.date === todayStr)
+    .reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
+
+  const activeBookingsCount = myBookings.filter(
+    (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+  ).length;
+
   const avgOccupancy = mySpaces.length > 0
-    ? Math.round(mySpaces.reduce((acc, curr) => acc + curr.occupancyPercent, 0) / mySpaces.length)
-    : 74;
-  const avgRating = mySpaces.length > 0
-    ? Number((mySpaces.reduce((acc, curr) => acc + curr.rating, 0) / mySpaces.length).toFixed(1))
-    : 4.8;
+    ? Math.round(mySpaces.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) / mySpaces.length)
+    : 0;
 
-  // Revenue chart by day of the week
-  const earningsChart = [
-    { day: 'Mon', revenue: 980, bookings: 7 },
-    { day: 'Tue', revenue: 1150, bookings: 9 },
-    { day: 'Wed', revenue: 1420, bookings: 11 },
-    { day: 'Thu', revenue: 1280, bookings: 10 },
-    { day: 'Fri', revenue: 1850, bookings: 14 },
-    { day: 'Sat', revenue: 2340, bookings: 18 },
-    { day: 'Sun', revenue: 2190, bookings: 16 },
-  ];
+  const avgRating = mySpaces.length > 0
+    ? Number((mySpaces.reduce((acc, curr) => acc + (curr.rating || 5), 0) / mySpaces.length).toFixed(1))
+    : 5.0;
+
+  const pendingPayout = myPayouts
+    .filter((p) => p.status === 'pending')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const paidOut = myPayouts
+    .filter((p) => p.status === 'completed')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  // Dynamic revenue chart by day of the week
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const earningsChart = days.map((day) => ({
+    day,
+    revenue: 0,
+    bookings: 0,
+  }));
 
   // Occupancy heatmap by hour
-  const occupancyChart = [
-    { time: '08 AM', occupancy: 35 },
-    { time: '10 AM', occupancy: 78 },
-    { time: '12 PM', occupancy: 88 },
-    { time: '02 PM', occupancy: 92 },
-    { time: '04 PM', occupancy: 85 },
-    { time: '06 PM', occupancy: 70 },
-    { time: '08 PM', occupancy: 52 },
-    { time: '10 PM', occupancy: 28 },
-  ];
+  const hours = ['08 AM', '10 AM', '12 PM', '02 PM', '04 PM', '06 PM', '08 PM', '10 PM'];
+  const occupancyChart = hours.map((time) => ({
+    time,
+    occupancy: avgOccupancy,
+  }));
 
   res.json({
     success: true,
     data: {
       metrics: {
         todayEarnings,
-        thisMonthEarnings: 8420,
+        thisMonthEarnings: totalEarnings,
         totalEarnings,
-        pendingPayout: 2100,
-        paidOut: 22760,
+        pendingPayout,
+        paidOut,
         activeBookings: activeBookingsCount,
         occupancy: avgOccupancy,
         rating: avgRating,
@@ -119,14 +128,19 @@ export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void 
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
   const payouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
+  const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
+  const totalEarnings = myBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
+  const pendingPayout = payouts.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  const paidOut = payouts.filter((p) => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
+
   res.json({
     success: true,
     data: payouts,
     summary: {
-      totalEarnings: 24860,
-      thisMonth: 8420,
-      pendingPayout: 2100,
-      paidOut: 22760,
+      totalEarnings,
+      thisMonth: totalEarnings,
+      pendingPayout,
+      paidOut,
     },
   });
 };

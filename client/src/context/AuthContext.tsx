@@ -25,8 +25,8 @@ const defaultDriverUser: User = {
   phone: '+91 98301 23456',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   memberSince: 'March 2023',
-  responseRate: '98%',
-  walletBalance: 450,
+  responseRate: '100%',
+  walletBalance: 0,
 };
 
 const getInitialUser = (): User | null => {
@@ -88,8 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: '+91 98301 23456',
           avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
           memberSince: 'March 2023',
-          responseRate: '98%',
-          walletBalance: 450,
+          responseRate: '100%',
+          walletBalance: 0,
         },
         {
           id: 'usr_owner_1',
@@ -99,8 +99,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: '+91 98740 54321',
           avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
           memberSince: 'January 2022',
-          responseRate: '99%',
-          walletBalance: 24860,
+          responseRate: '100%',
+          walletBalance: 0,
         },
         {
           id: 'usr_admin_1',
@@ -161,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         memberSince: 'Just now',
         responseRate: '100%',
-        walletBalance: role === 'driver' ? 500 : 0,
+        walletBalance: 0,
       };
       setUser(newUser);
       return newUser;
@@ -199,8 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar:
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
         memberSince: 'January 2022',
-        responseRate: '99%',
-        walletBalance: 24860,
+        responseRate: '100%',
+        walletBalance: 0,
       };
       fallbackToken = 'demo-owner-token';
     } else if (role === 'admin') {

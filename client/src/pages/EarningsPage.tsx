@@ -28,10 +28,10 @@ export const EarningsPage: React.FC = () => {
 
   const [payouts, setPayouts] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>({
-    totalEarnings: 24860,
-    thisMonth: 8420,
-    pendingPayout: 2100,
-    paidOut: 22760,
+    totalEarnings: 0,
+    thisMonth: 0,
+    pendingPayout: 0,
+    paidOut: 0,
   });
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [payoutSuccessMsg, setPayoutSuccessMsg] = useState<string>('');

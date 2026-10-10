@@ -68,8 +68,8 @@ const DEFAULT_USERS: User[] = [
     phone: '+91 98740 54321',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     memberSince: 'January 2022',
-    walletBalance: 24860,
-    responseRate: '99%',
+    walletBalance: 0,
+    responseRate: '100%',
   },
   {
     id: 'usr_driver_1',
@@ -79,90 +79,14 @@ const DEFAULT_USERS: User[] = [
     phone: '+91 98301 23456',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     memberSince: 'March 2023',
-    walletBalance: 450,
-    responseRate: '98%',
-  },
-  {
-    id: 'usr_driver_2',
-    name: 'Ananya Sharma',
-    email: 'ananya.sharma@example.com',
-    role: 'driver',
-    phone: '+91 98111 22334',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    memberSince: 'July 2023',
-    walletBalance: 1200,
-    responseRate: '95%',
-  },
-  {
-    id: 'usr_owner_2',
-    name: 'Siddharth Mehra',
-    email: 'siddharth.m@parkspaces.in',
-    role: 'owner',
-    phone: '+91 98222 33445',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    memberSince: 'November 2022',
-    walletBalance: 18450,
-    responseRate: '97%',
+    walletBalance: 0,
+    responseRate: '100%',
   },
 ];
 
-const DEFAULT_VERIFICATIONS: VerificationRequestItem[] = [
-  {
-    id: 'vr_1',
-    listingId: 'park_sub_101',
-    ownerName: 'Rahul Sharma',
-    title: 'Camac Street Executive Covered Bay',
-    location: '22 Camac Street, Park Street Area',
-    pricePerHour: 70,
-    documents: {
-      identity: true,
-      ownershipProof: true,
-      photos: true,
-    },
-    status: 'pending',
-    submittedAt: '2026-10-05T14:00:00.000Z',
-  },
-  {
-    id: 'vr_2',
-    listingId: 'park_sub_102',
-    ownerName: 'Sunita Singhania',
-    title: 'Salt Lake Sector 3 Gated Driveway',
-    location: 'IB Block, Sector 3, Bidhannagar',
-    pricePerHour: 35,
-    documents: {
-      identity: true,
-      ownershipProof: true,
-      photos: false,
-    },
-    status: 'pending',
-    submittedAt: '2026-10-05T19:30:00.000Z',
-  },
-];
+const DEFAULT_VERIFICATIONS: VerificationRequestItem[] = [];
 
-const DEFAULT_REPORTS: ReportItem[] = [
-  {
-    id: 'rep_1',
-    userId: 'usr_driver_5',
-    userName: 'Debashis Chatterjee',
-    parkingId: 'park_6',
-    parkingTitle: 'Riverside Promenade Open Bay',
-    category: 'Incorrect location',
-    description: 'The GPS pin was 50 meters off the actual entry driveway which made it hard to spot at night.',
-    status: 'Investigating',
-    createdAt: '2026-10-04T18:20:00.000Z',
-  },
-  {
-    id: 'rep_2',
-    userId: 'usr_driver_6',
-    userName: 'Megha Dutta',
-    parkingId: 'park_3',
-    parkingTitle: 'City Center Mall Basement P2',
-    category: 'Payment problem',
-    description: 'Double deduction initiated during peak gateway traffic. Customer care resolved via auto refund.',
-    status: 'Resolved',
-    createdAt: '2026-10-03T11:10:00.000Z',
-  },
-];
+const DEFAULT_REPORTS: ReportItem[] = [];
 
 export const AdminPanelPage: React.FC = () => {
   const { user, updateUser } = useAuth();

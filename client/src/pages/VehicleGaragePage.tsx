@@ -20,45 +20,13 @@ export const VehicleGaragePage: React.FC = () => {
   const fetchVehicles = async () => {
     try {
       const res = await api.getVehicles();
-      if (res.success && res.data.length > 0) {
+      if (res.success && Array.isArray(res.data)) {
         setVehicles(res.data);
       } else {
-        setVehicles([
-          {
-            id: 'veh_1',
-            userId: 'usr_driver_1',
-            numberPlate: 'WB 01 AB 1234',
-            brand: 'Honda',
-            model: 'City ZX',
-            color: 'Pearl White',
-            type: 'Car',
-            isDefault: true,
-          },
-          {
-            id: 'veh_2',
-            userId: 'usr_driver_1',
-            numberPlate: 'WB 02 CD 5678',
-            brand: 'Hyundai',
-            model: 'Creta SX',
-            color: 'Phantom Black',
-            type: 'SUV',
-            isDefault: false,
-          },
-        ]);
+        setVehicles([]);
       }
     } catch {
-      setVehicles([
-        {
-          id: 'veh_1',
-          userId: 'usr_driver_1',
-          numberPlate: 'WB 01 AB 1234',
-          brand: 'Honda',
-          model: 'City ZX',
-          color: 'Pearl White',
-          type: 'Car',
-          isDefault: true,
-        },
-      ]);
+      setVehicles([]);
     }
   };
 
@@ -141,60 +109,82 @@ export const VehicleGaragePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Vehicles Grid (Requirement 26) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {vehicles.map((veh) => (
-          <div
-            key={veh.id}
-            className="p-6 rounded-3xl bg-[#0f172a] border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between space-y-6 relative overflow-hidden group"
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
-                  <Car className="w-6 h-6" />
-                </div>
-                {veh.isDefault && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
-                    Primary Vehicle
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  {veh.brand} {veh.model}
-                </h3>
-                <span className="text-xs text-slate-400">{veh.color} • {veh.type}</span>
-              </div>
-
-              {/* Number Plate Card Badge */}
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1 rounded">IND</span>
-                  <span className="font-mono font-black text-white text-sm tracking-wider">
-                    {veh.numberPlate}
-                  </span>
-                </div>
-                <Shield className="w-3.5 h-3.5 text-slate-500" />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-              <span className="text-emerald-400 font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Automated Entry
-              </span>
-              <button
-                type="button"
-                onClick={() => handleDeleteVehicle(veh.id)}
-                className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1 cursor-pointer"
-                title="Remove vehicle"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Vehicles Grid / Empty State */}
+      {vehicles.length === 0 ? (
+        <div className="p-12 sm:p-16 rounded-3xl bg-[#0f172a] border border-slate-800 text-center space-y-4 max-w-md mx-auto my-8">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mx-auto">
+            <Car className="w-8 h-8" />
           </div>
-        ))}
-      </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Your Garage is Empty</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Add your car, bike, SUV or EV to unlock automated boom barrier clearance and express check-in.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add Your First Vehicle</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {vehicles.map((veh) => (
+            <div
+              key={veh.id}
+              className="p-6 rounded-3xl bg-[#0f172a] border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between space-y-6 relative overflow-hidden group"
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400">
+                    <Car className="w-6 h-6" />
+                  </div>
+                  {veh.isDefault && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold">
+                      Primary Vehicle
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {veh.brand} {veh.model}
+                  </h3>
+                  <span className="text-xs text-slate-400">{veh.color} • {veh.type}</span>
+                </div>
+
+                {/* Number Plate Card Badge */}
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-1 rounded">IND</span>
+                    <span className="font-mono font-black text-white text-sm tracking-wider">
+                      {veh.numberPlate}
+                    </span>
+                  </div>
+                  <Shield className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Automated Entry
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteVehicle(veh.id)}
+                  className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1 cursor-pointer"
+                  title="Remove vehicle"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Add Vehicle Modal */}
       {showAddModal && (

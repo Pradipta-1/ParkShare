@@ -66,11 +66,11 @@ export const OwnerDashboardPage: React.FC = () => {
 
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [metrics, setMetrics] = useState<any>({
-    todayEarnings: 1240,
-    totalEarnings: 24860,
-    activeBookings: 8,
-    occupancy: 75,
-    rating: 4.8,
+    todayEarnings: 0,
+    totalEarnings: 0,
+    activeBookings: 0,
+    occupancy: 0,
+    rating: 5.0,
   });
   const [earningsChart, setEarningsChart] = useState<any[]>([]);
   const [occupancyChart, setOccupancyChart] = useState<any[]>([]);

@@ -2,30 +2,33 @@ import { Request, Response } from 'express';
 import { dbStore } from '../store/dbStore.js';
 
 export const getAdminMetrics = (_req: Request, res: Response): void => {
+  const totalRevenue = dbStore.bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const formattedRevenue = totalRevenue >= 100000
+    ? `₹${(totalRevenue / 100000).toFixed(1)}L`
+    : `₹${totalRevenue.toLocaleString()}`;
+
   const metrics = {
-    usersCount: 24820,
-    parkingSpacesCount: 6431,
-    bookingsCount: 18294,
-    revenueTotal: '₹18.4L',
+    usersCount: dbStore.users.length,
+    parkingSpacesCount: dbStore.parkingSpaces.length,
+    bookingsCount: dbStore.bookings.length,
+    revenueTotal: formattedRevenue,
     pendingVerifications: dbStore.verificationRequests.filter((v) => v.status === 'pending').length,
     openReports: dbStore.reports.filter((r) => r.status === 'Open' || r.status === 'Investigating').length,
   };
 
-  const bookingGrowthChart = [
-    { month: 'May', bookings: 2100, revenue: 190000 },
-    { month: 'Jun', bookings: 2800, revenue: 260000 },
-    { month: 'Jul', bookings: 3400, revenue: 310000 },
-    { month: 'Aug', bookings: 4100, revenue: 380000 },
-    { month: 'Sep', bookings: 5300, revenue: 490000 },
-    { month: 'Oct', bookings: 6100, revenue: 560000 },
-  ];
+  const months = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
+  const bookingGrowthChart = months.map((month) => ({
+    month,
+    bookings: 0,
+    revenue: 0,
+  }));
 
   const occupancyDistribution = [
-    { zone: 'Commercial District', occupancy: 86 },
-    { zone: 'Transit Stations', occupancy: 82 },
-    { zone: 'Shopping Malls', occupancy: 78 },
-    { zone: 'Residential Driveways', occupancy: 61 },
-    { zone: 'Airport Parking', occupancy: 74 },
+    { zone: 'Commercial District', occupancy: 0 },
+    { zone: 'Transit Stations', occupancy: 0 },
+    { zone: 'Shopping Malls', occupancy: 0 },
+    { zone: 'Residential Driveways', occupancy: 0 },
+    { zone: 'Airport Parking', occupancy: 0 },
   ];
 
   res.json({

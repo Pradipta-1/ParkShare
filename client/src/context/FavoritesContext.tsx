@@ -13,7 +13,7 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(['park_1', 'park_2']);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [favoriteSpaces, setFavoriteSpaces] = useState<ParkingSpace[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 

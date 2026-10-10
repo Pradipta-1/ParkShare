@@ -153,13 +153,34 @@ export const AvailabilityCalendarPage: React.FC = () => {
         </div>
       )}
 
-      {/* Weekly Rate & Occupancy Heatmap Section */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#0f172a] border border-slate-800 space-y-3 sm:space-y-3.5 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-extrabold text-white text-sm sm:text-base">Weekly Rate & Occupancy Heatmap</h3>
+      {spaces.length === 0 ? (
+        <div className="p-12 sm:p-16 rounded-3xl bg-[#0f172a] border border-slate-800 text-center space-y-4 max-w-md mx-auto my-8">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mx-auto">
+            <Calendar className="w-8 h-8" />
           </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">No Parking Spaces Listed</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              List your parking spot to manage calendar availability, weekend surge rates, and date blocking.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/add-space')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 cursor-pointer"
+          >
+            <span>List a Parking Space</span>
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* Weekly Rate & Occupancy Heatmap Section */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0f172a] border border-slate-800 space-y-3 sm:space-y-3.5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-emerald-400" />
+                <h3 className="font-extrabold text-white text-sm sm:text-base">Weekly Rate & Occupancy Heatmap</h3>
+              </div>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Normal
@@ -369,8 +390,10 @@ export const AvailabilityCalendarPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 };
 
 
