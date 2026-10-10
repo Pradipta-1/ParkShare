@@ -299,18 +299,22 @@ export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void 
 export const requestPayout = (req: AuthenticatedRequest, res: Response): void => {
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
-  const { amount = 2100 } = req.body;
+  const { amount = 2100, paymentMethod = 'UPI', accountDetails = 'UPI: 9874054321@okaxis' } = req.body;
 
+  const now = new Date().toISOString();
   const newPayout: PayoutItem = {
     id: `pay_${uuidv4().substring(0, 8)}`,
     ownerId,
     amount: Number(amount),
     status: 'pending',
-    method: 'HDFC Bank (NEFT) ****4921',
-    date: new Date().toISOString().split('T')[0],
+    method: `${paymentMethod} - ${accountDetails}`,
+    date: now.split('T')[0],
   };
+  (newPayout as any).paymentMethod = paymentMethod;
+  (newPayout as any).accountDetails = accountDetails;
+  (newPayout as any).processedAt = now;
 
-  dbStore.payouts.unshift(newPayout);
+  dbStore.savePayout(newPayout);
 
   res.status(201).json({
     success: true,

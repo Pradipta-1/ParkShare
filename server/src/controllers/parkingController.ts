@@ -213,18 +213,23 @@ export const createParkingSpace = (req: AuthenticatedRequest, res: Response): vo
 
   dbStore.saveParkingSpace(newSpace);
 
-  // Add verification request to queue
-  dbStore.verificationRequests.unshift({
+  // Add verification request to queue & MongoDB Atlas
+  const vrObj = {
     id: `vr_${uuidv4().substring(0, 8)}`,
+    ownerId: user.id,
     listingId: newSpace.id,
+    parkingId: newSpace.id,
     ownerName: user.name,
     title: newSpace.title,
+    parkingTitle: newSpace.title,
     location: newSpace.address,
     pricePerHour: newSpace.pricePerHour,
+    documentUrls: ['https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800'],
     documents: { identity: true, ownershipProof: true, photos: true },
     status: 'pending',
     submittedAt: new Date().toISOString(),
-  });
+  };
+  dbStore.saveVerificationRequest(vrObj as any);
 
   res.status(201).json({
     success: true,

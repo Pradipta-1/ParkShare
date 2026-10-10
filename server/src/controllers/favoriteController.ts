@@ -39,15 +39,18 @@ export const toggleFavorite = (req: AuthenticatedRequest, res: Response): void =
   const existingIndex = dbStore.favorites.findIndex((f) => f.userId === user.id && f.parkingId === parkingId);
 
   if (existingIndex > -1) {
-    dbStore.favorites.splice(existingIndex, 1);
+    dbStore.deleteFavorite(user.id, parkingId);
     res.json({ success: true, isFavorited: false, message: 'Removed from favorites' });
   } else {
-    dbStore.favorites.push({
+    const now = new Date().toISOString();
+    const newFav = {
       id: `fav_${uuidv4().substring(0, 8)}`,
       userId: user.id,
       parkingId,
-      createdAt: new Date().toISOString(),
-    });
-    res.json({ success: true, isFavorited: true, message: 'Saved to favorites' });
+      savedAt: now,
+      createdAt: now,
+    };
+    dbStore.saveFavorite(newFav);
+    res.json({ success: true, isFavorited: true, message: 'Saved to favorites', data: newFav });
   }
 };

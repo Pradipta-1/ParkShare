@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
-import { MessageItem } from '../models/types.js';
+import { MessageItem, NotificationItem } from '../models/types.js';
 
 export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): void => {
   const { bookingId } = req.params;
@@ -13,7 +13,10 @@ export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): 
   }
 
   const messages = dbStore.messages.filter(
-    (m) => m.bookingId === bookingId || (booking && (m.bookingId === booking.id || m.bookingId === booking.bookingCode))
+    (m) =>
+      m.bookingId === bookingId ||
+      (m as any).conversationId === bookingId ||
+      (booking && (m.bookingId === booking.id || m.bookingId === booking.bookingCode || (m as any).conversationId === booking.id))
   );
 
   const owner = booking ? dbStore.users.find((u) => u.id === booking.ownerId) : null;
@@ -45,8 +48,9 @@ export const sendMessage = (req: AuthenticatedRequest, res: Response): void => {
     return;
   }
 
-  const { bookingId, text, receiverId } = req.body;
-  if (!text || !bookingId) {
+  const { bookingId, text, messageText, receiverId, conversationId } = req.body;
+  const content = text || messageText;
+  if (!content || !bookingId) {
     res.status(400).json({ success: false, message: 'Message text and bookingId are required' });
     return;
   }
@@ -68,27 +72,32 @@ export const sendMessage = (req: AuthenticatedRequest, res: Response): void => {
   const newMessage: MessageItem = {
     id: `msg_${uuidv4().substring(0, 8)}`,
     bookingId: booking ? booking.id : bookingId,
+    conversationId: conversationId || (booking ? booking.id : bookingId),
     senderId: user.id,
     senderName: user.name,
     senderRole: user.role,
     receiverId: targetReceiver,
-    text,
+    text: content,
+    messageText: content,
     timestamp,
-  };
+    isRead: false,
+  } as any;
 
-  dbStore.messages.push(newMessage);
+  dbStore.saveMessage(newMessage);
 
-  // Dispatch real-time notification to receiver
-  dbStore.notifications.unshift({
+  // Dispatch real-time notification to receiver and persist
+  const newNotif: NotificationItem = {
     id: `notif_${uuidv4().substring(0, 8)}`,
     userId: targetReceiver,
     type: 'general',
     title: `New message from ${user.name}`,
-    message: text.length > 70 ? `${text.substring(0, 70)}...` : text,
+    message: content.length > 70 ? `${content.substring(0, 70)}...` : content,
     dateGroup: 'Today',
     read: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+
+  dbStore.saveNotification(newNotif);
 
   res.status(201).json({
     success: true,

@@ -10,7 +10,7 @@ export const getNotifications = (req: AuthenticatedRequest, res: Response): void
   }
 
   const notifs = dbStore.notifications.filter((n) => n.userId === user.id);
-  const unreadCount = notifs.filter((n) => !n.read).length;
+  const unreadCount = notifs.filter((n) => !n.read && !(n as any).isRead).length;
 
   res.json({
     success: true,
@@ -25,6 +25,8 @@ export const markAsRead = (req: AuthenticatedRequest, res: Response): void => {
 
   if (notif) {
     notif.read = true;
+    (notif as any).isRead = true;
+    dbStore.saveNotification(notif);
   }
 
   res.json({ success: true, message: 'Notification marked as read' });
@@ -41,6 +43,8 @@ export const markAllAsRead = (req: AuthenticatedRequest, res: Response): void =>
     .filter((n) => n.userId === user.id)
     .forEach((n) => {
       n.read = true;
+      (n as any).isRead = true;
+      dbStore.saveNotification(n);
     });
 
   res.json({ success: true, message: 'All notifications marked as read' });

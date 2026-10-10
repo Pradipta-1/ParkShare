@@ -127,25 +127,30 @@ export const approveVerification = (req: Request, res: Response): void => {
   }
 
   vr.status = 'approved';
+  (vr as any).reviewedBy = (req as any).user?.name || 'Platform Admin';
+  (vr as any).reviewedAt = new Date().toISOString();
+  dbStore.saveVerificationRequest(vr);
 
   // Mark parking space as verified
   const parking = dbStore.parkingSpaces.find((p) => p.id === vr.listingId || p.title === vr.title);
   if (parking) {
     parking.isVerified = true;
+    dbStore.saveParkingSpace(parking);
   }
 
   // Push notification to Space Owner account
   const ownerId = parking?.ownerId || 'usr_owner_1';
-  dbStore.notifications.unshift({
+  const notifObj = {
     id: `notif_${Date.now()}`,
     userId: ownerId,
-    type: 'verification',
+    type: 'verification' as const,
     title: 'Listing Verified by Admin',
     message: `Congratulations! Your space "${vr.title}" has been verified by Admin and awarded the "Verified Parking" badge.`,
-    dateGroup: 'Today',
+    dateGroup: 'Today' as const,
     read: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+  dbStore.saveNotification(notifObj);
 
   res.json({
     success: true,
@@ -165,25 +170,30 @@ export const rejectVerification = (req: Request, res: Response): void => {
   }
 
   vr.status = 'rejected';
+  (vr as any).reviewedBy = (req as any).user?.name || 'Platform Admin';
+  (vr as any).reviewedAt = new Date().toISOString();
+  dbStore.saveVerificationRequest(vr);
 
   // Clear verification flag on parking space
   const parking = dbStore.parkingSpaces.find((p) => p.id === vr.listingId || p.title === vr.title);
   if (parking) {
     parking.isVerified = false;
+    dbStore.saveParkingSpace(parking);
   }
 
   // Push notification to Space Owner account
   const ownerId = parking?.ownerId || 'usr_owner_1';
-  dbStore.notifications.unshift({
+  const notifObj = {
     id: `notif_${Date.now()}`,
     userId: ownerId,
-    type: 'general',
+    type: 'general' as const,
     title: 'Verification Request Rejected',
     message: `Your verification submission for "${vr.title}" was rejected by Admin. ${reason ? 'Reason: ' + reason : 'Reason: Clear space photos required.'} Please update and re-submit.`,
-    dateGroup: 'Today',
+    dateGroup: 'Today' as const,
     read: false,
     createdAt: new Date().toISOString(),
-  });
+  };
+  dbStore.saveNotification(notifObj);
 
   res.json({
     success: true,
@@ -194,6 +204,36 @@ export const rejectVerification = (req: Request, res: Response): void => {
 
 export const getReports = (_req: Request, res: Response): void => {
   res.json({ success: true, count: dbStore.reports.length, data: dbStore.reports });
+};
+
+export const createReport = (req: Request, res: Response): void => {
+  const user = (req as any).user || dbStore.users[0];
+  const { reporterId, userId, reportedItemId, parkingId, reason, category, details, description, parkingTitle } = req.body;
+  const effectiveUserId = reporterId || userId || user.id;
+
+  const newReport: any = {
+    id: `rep_${Date.now()}`,
+    reporterId: effectiveUserId,
+    userId: effectiveUserId,
+    userName: user.name || 'Driver User',
+    reportedItemId: reportedItemId || parkingId || 'park_space_01',
+    parkingId: parkingId || reportedItemId || 'park_space_01',
+    parkingTitle: parkingTitle || 'Reported Bay',
+    reason: reason || category || 'Dispute',
+    category: category || reason || 'Other',
+    details: details || description || 'Incident reported by user',
+    description: description || details || 'Incident reported by user',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  };
+
+  dbStore.saveReport(newReport);
+
+  res.status(201).json({
+    success: true,
+    message: 'Dispute / Incident report submitted successfully',
+    data: newReport,
+  });
 };
 
 export const updateReportStatus = (req: Request, res: Response): void => {
@@ -210,6 +250,7 @@ export const updateReportStatus = (req: Request, res: Response): void => {
   if (resolutionNote) {
     (report as any).resolutionNote = resolutionNote;
   }
+  dbStore.saveReport(report);
 
   // If refund requested, credit customer wallet
   const refundNum = Number(refundAmount) || 0;
@@ -218,6 +259,7 @@ export const updateReportStatus = (req: Request, res: Response): void => {
       dbStore.users.find((u) => u.role === 'driver');
     if (customer) {
       customer.walletBalance = (customer.walletBalance || 0) + refundNum;
+      dbStore.saveUser(customer);
     }
   }
 
@@ -226,7 +268,7 @@ export const updateReportStatus = (req: Request, res: Response): void => {
   const refundText = refundNum > 0 ? ` ₹${refundNum} has been credited to your wallet.` : '';
   const noteText = resolutionNote ? ` Note: "${resolutionNote}".` : '';
 
-  dbStore.notifications.unshift({
+  dbStore.saveNotification({
     id: `notif_${Date.now()}`,
     userId: customerId,
     type: refundNum > 0 ? ('refund' as const) : ('general' as const),
@@ -238,7 +280,7 @@ export const updateReportStatus = (req: Request, res: Response): void => {
   });
 
   // Notify Space Owner (Host)
-  dbStore.notifications.unshift({
+  dbStore.saveNotification({
     id: `notif_${Date.now() + 1}`,
     userId: 'usr_owner_1',
     type: 'general',

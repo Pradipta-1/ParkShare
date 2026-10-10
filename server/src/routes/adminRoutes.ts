@@ -8,6 +8,7 @@ import {
   approveVerification,
   rejectVerification,
   getReports,
+  createReport,
   updateReportStatus,
   resetUserKey,
   updateAdminUser,
@@ -36,6 +37,7 @@ router.put('/verification/:id/reject', optionalAuthenticate, rejectVerification)
 router.post('/verifications/:id/reject', optionalAuthenticate, rejectVerification);
 router.put('/verifications/:id/reject', optionalAuthenticate, rejectVerification);
 router.get('/reports', optionalAuthenticate, getReports);
+router.post('/reports', optionalAuthenticate, createReport);
 router.put('/reports/:id/status', optionalAuthenticate, updateReportStatus);
 
 export default router;
