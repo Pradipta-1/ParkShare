@@ -211,7 +211,7 @@ export const createParkingSpace = (req: AuthenticatedRequest, res: Response): vo
     createdAt: new Date().toISOString(),
   };
 
-  dbStore.parkingSpaces.unshift(newSpace);
+  dbStore.saveParkingSpace(newSpace);
 
   // Add verification request to queue
   dbStore.verificationRequests.unshift({
@@ -244,6 +244,7 @@ export const updateParkingSpace = (req: AuthenticatedRequest, res: Response): vo
 
   // Update fields
   Object.assign(parking, req.body);
+  dbStore.saveParkingSpace(parking);
 
   res.json({
     success: true,
@@ -261,7 +262,7 @@ export const deleteParkingSpace = (req: AuthenticatedRequest, res: Response): vo
     return;
   }
 
-  dbStore.parkingSpaces.splice(index, 1);
+  dbStore.deleteParkingSpace(id);
   res.json({
     success: true,
     message: 'Parking space deleted',

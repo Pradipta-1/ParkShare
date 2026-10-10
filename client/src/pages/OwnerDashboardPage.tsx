@@ -94,82 +94,232 @@ export const OwnerDashboardPage: React.FC = () => {
 
   const greetingInfo = getGreeting();
 
+  const thisWeekRevenue = useMemo(() => {
+    return (earningsChart || []).reduce((sum, item) => sum + (Number(item.revenue) || 0), 0);
+  }, [earningsChart]);
+
+  const peakOccupancyInfo = useMemo(() => {
+    if (!occupancyChart || occupancyChart.length === 0) {
+      return { label: 'Peak window: Normal hours', peakPercent: 0 };
+    }
+    const highest = [...occupancyChart].sort((a, b) => (b.occupancy || 0) - (a.occupancy || 0))[0];
+    if (!highest || highest.occupancy === 0) {
+      return { label: 'Peak window: Normal activity', peakPercent: 0 };
+    }
+    return {
+      label: `Peak window: ${highest.time}`,
+      peakPercent: highest.occupancy || 0,
+    };
+  }, [occupancyChart]);
+
   const fetchOwnerData = async () => {
     setIsLoading(true);
     try {
-      const mRes = await api.getOwnerMetrics();
-      if (mRes.success) {
-        setMetrics(mRes.data.metrics);
-        setEarningsChart(mRes.data.earningsChart);
-        setOccupancyChart(mRes.data.occupancyChart);
-        if (mRes.data.recentBookings) {
-          setRecentBookings(mRes.data.recentBookings);
-        }
+      const [mRes, sRes, bRes] = await Promise.allSettled([
+        api.getOwnerMetrics(),
+        api.getOwnerSpaces(),
+        api.getBookings(undefined, true),
+      ]);
+
+      // 1. Gather all bookings across API and localStorage
+      const localBookingsRaw: Booking[] = JSON.parse(
+        localStorage.getItem('parkshare_custom_bookings') || '[]'
+      );
+      const cancelledIds: string[] = JSON.parse(
+        localStorage.getItem('parkshare_cancelled_booking_ids') || '[]'
+      );
+
+      let allBookings: Booking[] = [];
+      if (bRes.status === 'fulfilled' && bRes.value.success && Array.isArray(bRes.value.data)) {
+        allBookings = [...bRes.value.data];
+      } else if (mRes.status === 'fulfilled' && mRes.value.success && mRes.value.data.recentBookings) {
+        allBookings = [...mRes.value.data.recentBookings];
       }
-      const sRes = await api.getOwnerSpaces();
+
+      // Merge local storage bookings seamlessly
+      if (localBookingsRaw.length > 0) {
+        const existingIds = new Set(allBookings.map((b) => b.id));
+        const customToAdd = localBookingsRaw.filter((b) => !existingIds.has(b.id));
+        allBookings = [...customToAdd, ...allBookings];
+      }
+
+      // Filter out cancelled bookings
+      const validBookings = allBookings.filter(
+        (b) =>
+          b.bookingStatus !== 'cancelled' &&
+          !cancelledIds.includes(b.id) &&
+          !(b.bookingCode && cancelledIds.includes(b.bookingCode))
+      );
+
+      // Set live driver reservations roster (with amount, date, timing)
+      setRecentBookings(validBookings);
+
+      // 2. Spaces reconciliation
       const localCustom: ParkingSpace[] = JSON.parse(
         localStorage.getItem('parkshare_custom_spaces') || '[]'
       );
-      if (sRes.success) {
-        const serverIds = new Set(sRes.data.map((s) => s.id));
+      let mergedSpaces: ParkingSpace[] = [];
+      const serverSpaces =
+        sRes.status === 'fulfilled' && sRes.value.success && Array.isArray(sRes.value.data)
+          ? sRes.value.data
+          : [];
+
+      if (serverSpaces.length > 0) {
+        const serverIds = new Set(serverSpaces.map((s) => s.id));
         const customOnly = localCustom.filter((c) => !serverIds.has(c.id));
-        const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
-        const reconciledCustom = customOnly.map((space) => {
-          const activeBookings = localBookings.filter(
-            (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
-          );
-          const occupied = activeBookings.length;
-          const total = space.totalSpots || 1;
-          const avail = Math.max(0, total - occupied);
-          return {
-            ...space,
-            availableSpots: avail,
-            occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
-            status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
-          };
-        });
-        const merged = [...sRes.data, ...reconciledCustom];
-        setSpaces(merged);
-      } else if (localCustom.length > 0) {
-        const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
-        const reconciled = localCustom.map((space) => {
-          const activeBookings = localBookings.filter(
-            (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
-          );
-          const occupied = activeBookings.length;
-          const total = space.totalSpots || 1;
-          const avail = Math.max(0, total - occupied);
-          return {
-            ...space,
-            availableSpots: avail,
-            occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
-            status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
-          };
-        });
-        setSpaces(reconciled);
+        mergedSpaces = [...serverSpaces, ...customOnly];
+      } else {
+        mergedSpaces = [...localCustom];
       }
-    } catch {
-      const localCustom: ParkingSpace[] = JSON.parse(
-        localStorage.getItem('parkshare_custom_spaces') || '[]'
-      );
-      const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
-      const reconciled = localCustom.map((space) => {
-        const activeBookings = localBookings.filter(
+
+      const ratingMap = new Map(localCustom.map((c: any) => [c.id, { rating: c.rating, reviewCount: c.reviewCount }]));
+      const reconciledSpaces = mergedSpaces.map((space) => {
+        const activeBookings = validBookings.filter(
           (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
         );
         const occupied = activeBookings.length;
         const total = space.totalSpots || 1;
         const avail = Math.max(0, total - occupied);
+        const customRating = ratingMap.get(space.id);
+        const finalRating = customRating?.rating !== undefined ? customRating.rating : (space.rating ?? 5.0);
+        const finalReviews = customRating?.reviewCount !== undefined ? customRating.reviewCount : (space.reviewCount ?? 0);
         return {
           ...space,
           availableSpots: avail,
           occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
           status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
+          rating: finalRating,
+          reviewCount: finalReviews,
         };
       });
-      if (reconciled.length > 0) {
-        setSpaces(reconciled);
-      }
+      setSpaces(reconciledSpaces);
+
+      // 3. Dynamic metrics & charts from validBookings
+      const totalEarned = validBookings.reduce(
+        (sum, b) => sum + (b.subtotal || b.totalAmount || 0),
+        0
+      );
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayEarned =
+        validBookings
+          .filter((b) => b.date === todayStr)
+          .reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0) ||
+        (validBookings.length > 0 ? validBookings[0].subtotal || validBookings[0].totalAmount || 0 : 0);
+
+      const activeCount = validBookings.filter(
+        (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+      ).length;
+
+      const avgOcc =
+        reconciledSpaces.length > 0
+          ? Math.round(
+              reconciledSpaces.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) /
+                reconciledSpaces.length
+            )
+          : validBookings.length > 0
+          ? 50
+          : 0;
+
+      const serverMetrics =
+        mRes.status === 'fulfilled' && mRes.value.success ? mRes.value.data.metrics : {};
+
+      const liveRating =
+        reconciledSpaces.length > 0
+          ? Number((reconciledSpaces.reduce((sum, s) => sum + (s.rating || 5), 0) / reconciledSpaces.length).toFixed(1))
+          : (serverMetrics.rating || 5.0);
+
+      setMetrics({
+        todayEarnings: todayEarned,
+        totalEarnings: totalEarned,
+        thisMonthEarnings: totalEarned,
+        pendingPayout: serverMetrics.pendingPayout ?? totalEarned,
+        paidOut: serverMetrics.paidOut ?? 0,
+        activeBookings: activeCount,
+        occupancy: avgOcc,
+        rating: liveRating,
+        totalSpaces: reconciledSpaces.length,
+      });
+
+      // 4. Weekly revenue velocity area chart
+      const dayMap: Record<string, { revenue: number; bookings: number }> = {
+        Mon: { revenue: 0, bookings: 0 },
+        Tue: { revenue: 0, bookings: 0 },
+        Wed: { revenue: 0, bookings: 0 },
+        Thu: { revenue: 0, bookings: 0 },
+        Fri: { revenue: 0, bookings: 0 },
+        Sat: { revenue: 0, bookings: 0 },
+        Sun: { revenue: 0, bookings: 0 },
+      };
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      validBookings.forEach((b) => {
+        const d = new Date(b.date);
+        const dayName = !isNaN(d.getTime()) ? dayNames[d.getDay()] : 'Mon';
+        if (dayMap[dayName]) {
+          dayMap[dayName].revenue += b.subtotal || b.totalAmount || 0;
+          dayMap[dayName].bookings += 1;
+        }
+      });
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      setEarningsChart(
+        days.map((day) => ({
+          day,
+          revenue: dayMap[day].revenue,
+          bookings: dayMap[day].bookings,
+        }))
+      );
+
+      // 5. Hourly occupancy profile bar chart
+      const parseTimeToHour = (timeStr?: string): number => {
+        if (!timeStr) return 12;
+        const match = timeStr.match(/(\d+)(?::\d+)?\s*(AM|PM)?/i);
+        if (!match) return 12;
+        let h = parseInt(match[1], 10);
+        const period = match[2]?.toUpperCase();
+        if (period === 'PM' && h < 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        return h;
+      };
+
+      const hourSlots = [
+        { time: '08 AM', hour: 8 },
+        { time: '10 AM', hour: 10 },
+        { time: '12 PM', hour: 12 },
+        { time: '02 PM', hour: 14 },
+        { time: '04 PM', hour: 16 },
+        { time: '06 PM', hour: 18 },
+        { time: '08 PM', hour: 20 },
+        { time: '10 PM', hour: 22 },
+      ];
+
+      const activeBookings = validBookings.filter(
+        (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+      );
+      const totalCapacity = Math.max(
+        1,
+        reconciledSpaces.reduce((sum, s) => sum + (s.totalSpots || 1), 0)
+      );
+
+      setOccupancyChart(
+        hourSlots.map(({ time, hour }) => {
+          const occupiedCount = activeBookings.filter((b) => {
+            const arr = parseTimeToHour(b.arrivalTime);
+            const dep = b.departureTime
+              ? parseTimeToHour(b.departureTime)
+              : arr + (b.durationHours || 3);
+            const safeDep = dep <= arr ? arr + 3 : dep;
+            return hour >= arr && hour < safeDep;
+          }).length;
+
+          const occupancy = Math.min(100, Math.round((occupiedCount / totalCapacity) * 100));
+          return {
+            time,
+            occupancy: activeBookings.length > 0 ? occupancy : 0,
+            occupiedSpots: occupiedCount,
+          };
+        })
+      );
+    } catch {
+      // Keep existing state on error
     } finally {
       setIsLoading(false);
     }
@@ -180,9 +330,17 @@ export const OwnerDashboardPage: React.FC = () => {
     const handleSync = () => fetchOwnerData();
     window.addEventListener('parkshare_booking_created', handleSync);
     window.addEventListener('parkshare_booking_cancelled', handleSync);
+    window.addEventListener('parkshare_space_created', handleSync);
+    window.addEventListener('parkshare_spots_updated', handleSync);
+    window.addEventListener('parkshare_rating_updated', handleSync);
+    window.addEventListener('storage', handleSync);
     return () => {
       window.removeEventListener('parkshare_booking_created', handleSync);
       window.removeEventListener('parkshare_booking_cancelled', handleSync);
+      window.removeEventListener('parkshare_space_created', handleSync);
+      window.removeEventListener('parkshare_spots_updated', handleSync);
+      window.removeEventListener('parkshare_rating_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
     };
   }, []);
 
@@ -713,6 +871,14 @@ export const OwnerDashboardPage: React.FC = () => {
                               </span>
                               <span className="text-[11px] text-slate-400">spots free</span>
                             </div>
+
+                            <span className="text-slate-600">•</span>
+
+                            <div className="flex items-center gap-1 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg text-amber-400 font-bold text-xs">
+                              <Star className="w-3.5 h-3.5 fill-amber-400" />
+                              <span>{typeof space.rating === 'number' ? space.rating.toFixed(1) : (space.rating || '5.0')}</span>
+                              <span className="text-[10px] text-slate-400">({space.reviewCount || 0})</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -865,7 +1031,7 @@ export const OwnerDashboardPage: React.FC = () => {
                     <p className="text-xs text-slate-400 mt-0.5">Daily earnings across all registered parking bays</p>
                   </div>
                   <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 shadow-sm">
-                    ₹11,170 This Week
+                    ₹{thisWeekRevenue.toLocaleString()} This Week
                   </span>
                 </div>
 
@@ -934,9 +1100,9 @@ export const OwnerDashboardPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/80">
-                  <span>Peak window: 12 PM - 4 PM</span>
+                  <span>{peakOccupancyInfo.label}</span>
                   <span className="text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                    92% peak fill
+                    {peakOccupancyInfo.peakPercent}% peak fill
                   </span>
                 </div>
               </div>

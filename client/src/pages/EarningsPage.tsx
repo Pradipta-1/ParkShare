@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AreaChart,
@@ -33,23 +33,150 @@ export const EarningsPage: React.FC = () => {
     pendingPayout: 0,
     paidOut: 0,
   });
+  const [monthlyGrowth, setMonthlyGrowth] = useState<any[]>([]);
   const [isRequesting, setIsRequesting] = useState<boolean>(false);
   const [payoutSuccessMsg, setPayoutSuccessMsg] = useState<string>('');
 
-  useEffect(() => {
-    const loadPayouts = async () => {
-      try {
-        const res = await api.getOwnerPayouts();
-        if (res.success) {
-          setPayouts(res.data);
-          if (res.summary) setSummary(res.summary);
-        }
-      } catch {
-        // Fallback
+  const loadPayouts = async () => {
+    try {
+      const res = await api.getOwnerPayouts();
+      const localBookingsRaw: any[] = JSON.parse(
+        localStorage.getItem('parkshare_custom_bookings') || '[]'
+      );
+      const cancelledIds: string[] = JSON.parse(
+        localStorage.getItem('parkshare_cancelled_booking_ids') || '[]'
+      );
+
+      // Merge any server bookings with local bookings
+      const serverPayouts = (res.success && Array.isArray(res.data)) ? res.data : [];
+      let combined = [...localBookingsRaw];
+
+      const validBookings = combined.filter(
+        (b) =>
+          b.bookingStatus !== 'cancelled' &&
+          !cancelledIds.includes(b.id) &&
+          !(b.bookingCode && cancelledIds.includes(b.bookingCode))
+      );
+
+      const totalEarnings = validBookings.reduce(
+        (sum, b) => sum + (b.subtotal || b.totalAmount || 0),
+        0
+      );
+
+      const paidOut = serverPayouts
+        .filter((p) => p.status === 'completed')
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+      const pendingPayout = Math.max(0, totalEarnings - paidOut);
+
+      // Dynamic trailing 5 months
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const now = new Date();
+      const trailingMonths: { month: string; year: number; monthIdx: number }[] = [];
+      for (let i = 4; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        trailingMonths.push({
+          month: monthNames[d.getMonth()],
+          year: d.getFullYear(),
+          monthIdx: d.getMonth(),
+        });
       }
-    };
+
+      const dynamicMonthlyGrowth = trailingMonths.map(({ month, year, monthIdx }) => {
+        const list = validBookings.filter((b) => {
+          const d = new Date(b.date);
+          if (isNaN(d.getTime())) return false;
+          return d.getMonth() === monthIdx && d.getFullYear() === year;
+        });
+        return {
+          month,
+          amount: list.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0),
+          bookings: list.length,
+        };
+      });
+
+      const thisMonth =
+        dynamicMonthlyGrowth[dynamicMonthlyGrowth.length - 1]?.amount || totalEarnings;
+
+      setSummary({
+        totalEarnings,
+        thisMonth,
+        pendingPayout,
+        paidOut,
+      });
+
+      if (dynamicMonthlyGrowth.some((m) => m.amount > 0)) {
+        setMonthlyGrowth(dynamicMonthlyGrowth);
+      } else if (res.summary?.monthlyGrowth) {
+        setMonthlyGrowth(res.summary.monthlyGrowth);
+      } else {
+        setMonthlyGrowth(dynamicMonthlyGrowth);
+      }
+
+      // Live settlement line items from real driver bookings
+      const bookingSettlements = validBookings.map((b) => ({
+        id: b.id || b.transactionId,
+        amount: b.subtotal || b.totalAmount,
+        status: 'completed',
+        date: b.date,
+        method: `${b.parkingTitle} (${b.spotNumber || 'Bay Assigned'}) • ${b.arrivalTime || '02:00 PM'}`,
+        bookingCode: b.bookingCode,
+      }));
+
+      const finalPayouts =
+        bookingSettlements.length > 0 ? bookingSettlements : serverPayouts;
+      setPayouts(finalPayouts);
+    } catch {
+      // Offline fallback
+      try {
+        const localBookings: any[] = JSON.parse(
+          localStorage.getItem('parkshare_custom_bookings') || '[]'
+        );
+        const cancelledIds: string[] = JSON.parse(
+          localStorage.getItem('parkshare_cancelled_booking_ids') || '[]'
+        );
+        const valid = localBookings.filter(
+          (b) => b.bookingStatus !== 'cancelled' && !cancelledIds.includes(b.id)
+        );
+        const total = valid.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
+        setSummary((prev: any) => ({ ...prev, totalEarnings: total, thisMonth: total }));
+      } catch {}
+    }
+  };
+
+  useEffect(() => {
     loadPayouts();
+    const handleSync = () => loadPayouts();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    window.addEventListener('parkshare_booking_cancelled', handleSync);
+    window.addEventListener('parkshare_space_created', handleSync);
+    window.addEventListener('parkshare_spots_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('parkshare_booking_created', handleSync);
+      window.removeEventListener('parkshare_booking_cancelled', handleSync);
+      window.removeEventListener('parkshare_space_created', handleSync);
+      window.removeEventListener('parkshare_spots_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, []);
+
+  const growthComparison = useMemo(() => {
+    if (!monthlyGrowth || monthlyGrowth.length < 2) {
+      return { diffText: 'Live tracking', isPositive: true };
+    }
+    const current = monthlyGrowth[monthlyGrowth.length - 1];
+    const prev = monthlyGrowth[monthlyGrowth.length - 2];
+    if (!prev || prev.amount === 0) {
+      return { diffText: 'Live revenue', isPositive: true };
+    }
+    const pct = Math.round(((current.amount - prev.amount) / prev.amount) * 100);
+    const sign = pct >= 0 ? '+' : '';
+    return {
+      diffText: `${sign}${pct}% vs ${prev.month}`,
+      isPositive: pct >= 0,
+    };
+  }, [monthlyGrowth]);
 
   const handleRequestPayout = async () => {
     setIsRequesting(true);
@@ -78,14 +205,6 @@ export const EarningsPage: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
-
-  const monthlyGrowth = [
-    { month: 'Jun', amount: 3400 },
-    { month: 'Jul', amount: 4800 },
-    { month: 'Aug', amount: 6200 },
-    { month: 'Sep', amount: 7900 },
-    { month: 'Oct', amount: 8420 },
-  ];
 
   return (
     <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-5 sm:space-y-6">
@@ -157,8 +276,11 @@ export const EarningsPage: React.FC = () => {
         <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1">
           <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">This Month</span>
           <div className="text-xl sm:text-3xl font-black text-emerald-400">₹{summary.thisMonth.toLocaleString()}</div>
-          <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-            <ArrowUpRight className="w-3 h-3" /> +18% vs Sep
+          <span className={`text-[10px] sm:text-[11px] font-semibold flex items-center gap-1 ${
+            growthComparison.isPositive ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
+            <ArrowUpRight className={`w-3 h-3 ${growthComparison.isPositive ? '' : 'rotate-90'}`} />
+            {growthComparison.diffText}
           </span>
         </div>
 
@@ -183,7 +305,9 @@ export const EarningsPage: React.FC = () => {
             <p className="text-xs text-slate-400">Gross revenue generated across all parking spaces</p>
           </div>
           <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            Consecutive Monthly Growth
+            {monthlyGrowth.length > 0
+              ? `${monthlyGrowth[monthlyGrowth.length - 1].month}: ₹${(monthlyGrowth[monthlyGrowth.length - 1].amount || 0).toLocaleString()}`
+              : 'Live Monthly Velocity'}
           </span>
         </div>
 

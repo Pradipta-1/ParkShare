@@ -148,20 +148,36 @@ export const FindParkingPage: React.FC = () => {
       }
       const res = await api.getParkingSpaces(activeFilters);
       if (res.success && Array.isArray(res.data)) {
-        setParkingSpaces(res.data);
-        // Synchronize allSpacesForMap with updated statuses (e.g. released allotments)
+        let spacesList = res.data;
+        try {
+          const stored = JSON.parse(localStorage.getItem('parkshare_custom_spaces') || '[]');
+          if (Array.isArray(stored) && stored.length > 0) {
+            const ratingMap = new Map(stored.map((s: any) => [s.id, { rating: s.rating, reviewCount: s.reviewCount }]));
+            spacesList = spacesList.map((space) => {
+              const custom = ratingMap.get(space.id);
+              if (custom && custom.rating !== undefined) {
+                return { ...space, rating: custom.rating, reviewCount: custom.reviewCount ?? space.reviewCount };
+              }
+              return space;
+            });
+          }
+        } catch {}
+
+        setParkingSpaces(spacesList);
+        // Synchronize allSpacesForMap with updated statuses & ratings
         if (statusFilter === 'All' && !filters.q) {
-          setAllSpacesForMap(res.data);
+          setAllSpacesForMap(spacesList);
         } else {
           setAllSpacesForMap((prev) => {
-            if (prev.length === 0) return res.data;
-            const updatedMap = new Map(res.data.map((s) => [s.id, s]));
+            if (prev.length === 0) return spacesList;
+            const updatedMap = new Map(spacesList.map((s) => [s.id, s]));
             return prev.map((s) => updatedMap.get(s.id) || s);
           });
         }
         setSelectedSpace((prev) => {
-          if (prev && res.data.some((s) => s.id === prev.id)) {
-            return prev;
+          if (prev && spacesList.some((s) => s.id === prev.id)) {
+            const fresh = spacesList.find((s) => s.id === prev.id);
+            return fresh || prev;
           }
           return null;
         });
@@ -186,6 +202,18 @@ export const FindParkingPage: React.FC = () => {
 
   useEffect(() => {
     fetchSpaces();
+
+    const handleRatingSync = () => {
+      fetchSpaces();
+    };
+    window.addEventListener('parkshare_rating_updated', handleRatingSync);
+    window.addEventListener('parkshare_spots_updated', handleRatingSync);
+    window.addEventListener('storage', handleRatingSync);
+    return () => {
+      window.removeEventListener('parkshare_rating_updated', handleRatingSync);
+      window.removeEventListener('parkshare_spots_updated', handleRatingSync);
+      window.removeEventListener('storage', handleRatingSync);
+    };
   }, [fetchSpaces]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

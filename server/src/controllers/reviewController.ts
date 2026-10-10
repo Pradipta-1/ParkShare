@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
-import { Review } from '../models/types.js';
+import { Review, ParkingSpace } from '../models/types.js';
 
 export const getReviewsByParkingId = (req: Request, res: Response): void => {
   const { parkingId } = req.params;
@@ -48,38 +48,104 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
   }
 
   const { parkingId, rating, comment } = req.body;
-  if (!parkingId || !rating || !comment) {
-    res.status(400).json({ success: false, message: 'Parking ID, rating and comment are required' });
+  if (!parkingId || rating === undefined || rating === null) {
+    res.status(400).json({ success: false, message: 'Parking ID and rating are required' });
     return;
   }
 
-  const newReview: Review = {
-    id: `rev_${uuidv4().substring(0, 8)}`,
-    parkingId,
-    userId: user.id,
-    userName: user.name,
-    userAvatar: user.avatar,
-    rating: Number(rating),
-    comment,
-    date: 'Just now',
-    createdAt: new Date().toISOString(),
-  };
+  const numericRating = Math.min(5, Math.max(1, Number(rating)));
 
-  dbStore.reviews.unshift(newReview);
+  const existingIndex = dbStore.reviews.findIndex(
+    (r) => (r.parkingId === parkingId || r.parkingId.toLowerCase() === parkingId.toLowerCase()) && r.userId === user.id
+  );
 
-  // Update parking average rating
-  const parking = dbStore.parkingSpaces.find((p) => p.id === parkingId);
+  let newReview: Review;
+  if (existingIndex !== -1) {
+    dbStore.reviews[existingIndex].rating = numericRating;
+    if (comment) dbStore.reviews[existingIndex].comment = comment;
+    dbStore.reviews[existingIndex].date = 'Just now';
+    newReview = dbStore.reviews[existingIndex];
+  } else {
+    newReview = {
+      id: `rev_${uuidv4().substring(0, 8)}`,
+      parkingId,
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
+      rating: numericRating,
+      comment: comment || `Rated ${numericRating} out of 5 stars`,
+      date: 'Just now',
+      createdAt: new Date().toISOString(),
+    };
+    dbStore.saveReview(newReview);
+  }
+
+  // Update parking average rating and review count in dbStore
+  let updatedParking: any = null;
+  let parking = dbStore.parkingSpaces.find(
+    (p) => p.id === parkingId || p.id.toLowerCase() === parkingId.toLowerCase()
+  );
+
+  // If parking not directly in dbStore.parkingSpaces, check if matching booking exists
+  if (!parking) {
+    const matchingBooking = dbStore.bookings.find(
+      (b) => b.parkingId === parkingId || b.parkingTitle?.toLowerCase() === parkingId.toLowerCase()
+    );
+    if (matchingBooking) {
+      const createdSpace: ParkingSpace = {
+        id: matchingBooking.parkingId,
+        ownerId: matchingBooking.ownerId || 'usr_owner_1',
+        ownerName: (matchingBooking as any).ownerName || 'Vikramaditya Roy',
+        title: matchingBooking.parkingTitle,
+        description: 'Verified residential & commercial parking bay',
+        address: matchingBooking.parkingAddress,
+        city: 'Kolkata',
+        location: matchingBooking.parkingLocation || { lat: 22.5512, lng: 88.3619 },
+        pricePerHour: matchingBooking.pricePerHour || 50,
+        parkingType: 'Covered',
+        suitableVehicles: ['Car', 'SUV', 'EV'],
+        amenities: ['CCTV', 'Security'],
+        images: [
+          matchingBooking.parkingImage ||
+            'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+        ],
+        status: 'active',
+        isVerified: true,
+        isInstantBooking: true,
+        totalSpots: 4,
+        availableSpots: 3,
+        occupancyPercent: 25,
+        operatingHours: { open: '06:00 AM', close: '11:00 PM' },
+        blockedDates: [],
+        pricingCalendar: [],
+        rating: numericRating,
+        reviewCount: 1,
+        createdAt: new Date().toISOString(),
+      };
+      dbStore.saveParkingSpace(createdSpace);
+      parking = createdSpace;
+    }
+  }
+
   if (parking) {
-    parking.reviewCount = (parking.reviewCount || 0) + 1;
-    const all = dbStore.reviews.filter((r) => r.parkingId === parkingId);
+    const all = dbStore.reviews.filter(
+      (r) =>
+        r.parkingId === parking.id ||
+        r.parkingId.toLowerCase() === parking.id.toLowerCase() ||
+        (parking.title && r.parkingId.toLowerCase() === parking.title.toLowerCase())
+    );
+    parking.reviewCount = all.length;
     const sum = all.reduce((acc, curr) => acc + curr.rating, 0);
     parking.rating = Number((sum / all.length).toFixed(1));
+    dbStore.saveParkingSpace(parking);
+    updatedParking = parking;
   }
 
   res.status(201).json({
     success: true,
-    message: 'Review posted successfully',
+    message: 'Rating and review submitted successfully',
     data: newReview,
+    parking: updatedParking,
   });
 };
 

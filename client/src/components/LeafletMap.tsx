@@ -519,7 +519,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           <div class="flex items-center gap-1 font-semibold truncate ${isDark ? 'text-emerald-400' : 'text-emerald-700'}">
             <span>👤 Host: ${space.ownerName || 'Verified Owner'}</span>
           </div>
-          <span class="flex items-center gap-1 shrink-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}">⭐ <span class="font-bold ${isDark ? 'text-white' : 'text-slate-900'}">${space.rating || 5.0}</span> (${space.reviewCount || 0})</span>
+          <span class="flex items-center gap-1 shrink-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}">⭐ <span class="font-bold ${isDark ? 'text-white' : 'text-slate-900'}">${space.rating ? Number(space.rating).toFixed(1) : '5.0'}</span> (${space.reviewCount || 0})</span>
         </div>
 
         <div class="flex items-center justify-between text-[11px] mb-2 truncate ${isDark ? 'text-slate-400' : 'text-slate-600'}">

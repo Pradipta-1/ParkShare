@@ -47,3 +47,4 @@ lerna-debug.log*
 [Tt]humbs.db
 [Ee]hthumbs.db
 Desktop.ini
+.env

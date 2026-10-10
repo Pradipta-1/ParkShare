@@ -1,28 +1,64 @@
 import { Request, Response } from 'express';
 import { dbStore } from '../store/dbStore.js';
 
+const reconcileSpaces = () => {
+  for (const space of dbStore.parkingSpaces) {
+    const activeBookings = dbStore.bookings.filter(
+      (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
+    );
+    const occupied = activeBookings.length;
+    const total = space.totalSpots || 1;
+    space.availableSpots = Math.max(0, total - occupied);
+    space.occupancyPercent = Math.min(100, Math.round((occupied / total) * 100));
+    if (space.availableSpots > 0 && space.status === 'allotted') {
+      space.status = 'active';
+    } else if (space.availableSpots === 0 && space.status === 'active') {
+      space.status = 'allotted';
+    }
+  }
+};
+
 export const getAdminMetrics = (_req: Request, res: Response): void => {
+  reconcileSpaces();
+
   const validBookings = dbStore.bookings.filter((b) => b.bookingStatus !== 'cancelled');
   const totalRevenue = validBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
   const formattedRevenue = totalRevenue >= 100000
     ? `₹${(totalRevenue / 100000).toFixed(1)}L`
     : `₹${totalRevenue.toLocaleString()}`;
 
+  const allSpaces = dbStore.parkingSpaces;
+  const avgRating = allSpaces.length > 0
+    ? Number((allSpaces.reduce((sum, s) => sum + (s.rating || 5), 0) / allSpaces.length).toFixed(1))
+    : 5.0;
+
   const metrics = {
     usersCount: dbStore.users.length,
     parkingSpacesCount: dbStore.parkingSpaces.length,
     bookingsCount: validBookings.length,
     revenueTotal: formattedRevenue,
+    averageRating: avgRating,
     pendingVerifications: dbStore.verificationRequests.filter((v) => v.status === 'pending').length,
     openReports: dbStore.reports.filter((r) => r.status === 'Open' || r.status === 'Investigating').length,
   };
 
-  const months = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const bookingGrowthChart = months.map((month) => {
+  const now = new Date();
+  const trailingMonths: { month: string; year: number; monthIdx: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    trailingMonths.push({
+      month: monthNames[d.getMonth()],
+      year: d.getFullYear(),
+      monthIdx: d.getMonth(),
+    });
+  }
+
+  const bookingGrowthChart = trailingMonths.map(({ month, year, monthIdx }) => {
     const list = validBookings.filter((b) => {
       const d = new Date(b.date);
-      return !isNaN(d.getTime()) && monthNames[d.getMonth()] === month;
+      if (isNaN(d.getTime())) return false;
+      return d.getMonth() === monthIdx && d.getFullYear() === year;
     });
     return {
       month,
@@ -31,14 +67,25 @@ export const getAdminMetrics = (_req: Request, res: Response): void => {
     };
   });
 
-  const zones = ['Commercial District', 'Transit Stations', 'Shopping Malls', 'Residential Driveways', 'Airport Parking'];
-  const occupancyDistribution = zones.map((zone) => {
+  const standardHubs = ['Downtown', 'Business District', 'Airport', 'Railway Station', 'Shopping'];
+  const spaceCategories = dbStore.parkingSpaces
+    .map((p) => p.category)
+    .filter((c): c is NonNullable<typeof c> => Boolean(c)) as string[];
+  const uniqueZones: string[] = Array.from(new Set([...standardHubs, ...spaceCategories]));
+
+  const occupancyDistribution = uniqueZones.slice(0, 5).map((zone: string) => {
     const spacesInZone = dbStore.parkingSpaces.filter(
-      (p) => p.category?.toLowerCase() === zone.toLowerCase() || p.description?.toLowerCase().includes(zone.toLowerCase())
+      (p) =>
+        (p.category && p.category.toLowerCase() === zone.toLowerCase()) ||
+        (p.description && p.description.toLowerCase().includes(zone.toLowerCase())) ||
+        (p.title && p.title.toLowerCase().includes(zone.toLowerCase()))
     );
-    const avgOcc = spacesInZone.length > 0
-      ? Math.round(spacesInZone.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) / spacesInZone.length)
-      : 0;
+    const avgOcc =
+      spacesInZone.length > 0
+        ? Math.round(
+            spacesInZone.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) / spacesInZone.length
+          )
+        : 0;
     return { zone, occupancy: avgOcc };
   });
 

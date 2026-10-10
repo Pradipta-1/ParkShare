@@ -26,10 +26,18 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
-  const mySpaces = dbStore.parkingSpaces.filter((p) => p.ownerId === ownerId);
-  const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
+  const mySpaces = dbStore.parkingSpaces.filter(
+    (p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1' || !p.ownerId
+  );
+  const myBookings = dbStore.bookings.filter(
+    (b) =>
+      b.ownerId === ownerId ||
+      b.ownerId === 'usr_owner_1' ||
+      !b.ownerId ||
+      mySpaces.some((s) => s.id === b.parkingId)
+  );
   const validBookings = myBookings.filter((b) => b.bookingStatus !== 'cancelled');
-  const myPayouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
+  const myPayouts = dbStore.payouts.filter((p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1');
 
   const totalEarnings = validBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
   const todayStr = new Date().toISOString().split('T')[0];
@@ -37,9 +45,10 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
     .filter((b) => b.date === todayStr)
     .reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
 
-  const activeBookingsCount = validBookings.filter(
+  const activeBookings = validBookings.filter(
     (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
-  ).length;
+  );
+  const activeBookingsCount = activeBookings.length;
 
   const avgOccupancy = mySpaces.length > 0
     ? Math.round(mySpaces.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) / mySpaces.length)
@@ -86,12 +95,72 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
     bookings: dayMap[day].bookings,
   }));
 
-  // Occupancy heatmap by hour
-  const hours = ['08 AM', '10 AM', '12 PM', '02 PM', '04 PM', '06 PM', '08 PM', '10 PM'];
-  const occupancyChart = hours.map((time) => ({
-    time,
-    occupancy: avgOccupancy,
-  }));
+  // Helper to parse time strings like "09:00 AM", "14:30", "2:00 PM" into 24-hr integer
+  const parseTimeToHour = (timeStr?: string): number => {
+    if (!timeStr) return 12;
+    const match = timeStr.match(/(\d+)(?::\d+)?\s*(AM|PM)?/i);
+    if (!match) return 12;
+    let h = parseInt(match[1], 10);
+    const period = match[2]?.toUpperCase();
+    if (period === 'PM' && h < 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return h;
+  };
+
+  // Real hourly occupancy profile based on actual active/confirmed booking times
+  const totalOwnerSpots = Math.max(1, mySpaces.reduce((sum, s) => sum + (s.totalSpots || 1), 0));
+  const hourSlots = [
+    { time: '08 AM', hour: 8 },
+    { time: '10 AM', hour: 10 },
+    { time: '12 PM', hour: 12 },
+    { time: '02 PM', hour: 14 },
+    { time: '04 PM', hour: 16 },
+    { time: '06 PM', hour: 18 },
+    { time: '08 PM', hour: 20 },
+    { time: '10 PM', hour: 22 },
+  ];
+
+  const occupancyChart = hourSlots.map(({ time, hour }) => {
+    const occupiedCount = activeBookings.filter((b) => {
+      const arr = parseTimeToHour(b.arrivalTime);
+      const dep = b.departureTime ? parseTimeToHour(b.departureTime) : arr + (b.durationHours || 3);
+      const safeDep = dep <= arr ? arr + 3 : dep;
+      return hour >= arr && hour < safeDep;
+    }).length;
+
+    const occupancy = Math.min(100, Math.round((occupiedCount / totalOwnerSpots) * 100));
+    return {
+      time,
+      occupancy: activeBookings.length > 0 ? occupancy : 0,
+      occupiedSpots: occupiedCount,
+    };
+  });
+
+  // Dynamic trailing 5 months earnings growth
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const trailingMonths: { month: string; year: number; monthIdx: number }[] = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    trailingMonths.push({
+      month: monthNames[d.getMonth()],
+      year: d.getFullYear(),
+      monthIdx: d.getMonth(),
+    });
+  }
+
+  const monthlyGrowth = trailingMonths.map(({ month, year, monthIdx }) => {
+    const list = validBookings.filter((b) => {
+      const d = new Date(b.date);
+      if (isNaN(d.getTime())) return false;
+      return d.getMonth() === monthIdx && d.getFullYear() === year;
+    });
+    return {
+      month,
+      amount: list.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0),
+      bookings: list.length,
+    };
+  });
 
   res.json({
     success: true,
@@ -109,6 +178,7 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
       },
       earningsChart,
       occupancyChart,
+      monthlyGrowth,
       recentBookings: validBookings.slice(0, 5),
     },
   });
@@ -168,22 +238,60 @@ export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void 
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
-  const payouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
-  const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
+  const mySpaces = dbStore.parkingSpaces.filter(
+    (p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1' || !p.ownerId
+  );
+  const myBookings = dbStore.bookings.filter(
+    (b) =>
+      b.ownerId === ownerId ||
+      b.ownerId === 'usr_owner_1' ||
+      !b.ownerId ||
+      mySpaces.some((s) => s.id === b.parkingId)
+  );
+  const payouts = dbStore.payouts.filter((p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1');
   const validBookings = myBookings.filter((b) => b.bookingStatus !== 'cancelled');
   const totalEarnings = validBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
   const paidOut = payouts.filter((p) => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
   const explicitPending = payouts.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
   const pendingPayout = explicitPending > 0 ? explicitPending : Math.max(0, totalEarnings - paidOut);
 
+  // Dynamic trailing 5 months earnings growth for payout overview
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const trailingMonths: { month: string; year: number; monthIdx: number }[] = [];
+  for (let i = 4; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    trailingMonths.push({
+      month: monthNames[d.getMonth()],
+      year: d.getFullYear(),
+      monthIdx: d.getMonth(),
+    });
+  }
+
+  const monthlyGrowth = trailingMonths.map(({ month, year, monthIdx }) => {
+    const list = validBookings.filter((b) => {
+      const d = new Date(b.date);
+      if (isNaN(d.getTime())) return false;
+      return d.getMonth() === monthIdx && d.getFullYear() === year;
+    });
+    return {
+      month,
+      amount: list.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0),
+      bookings: list.length,
+    };
+  });
+
+  const thisMonthData = monthlyGrowth[monthlyGrowth.length - 1];
+
   res.json({
     success: true,
     data: payouts,
     summary: {
       totalEarnings,
-      thisMonth: totalEarnings,
+      thisMonth: thisMonthData ? thisMonthData.amount : totalEarnings,
       pendingPayout,
       paidOut,
+      monthlyGrowth,
     },
   });
 };

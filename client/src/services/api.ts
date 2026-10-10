@@ -552,10 +552,10 @@ class ApiService {
     return this.request<{ success: boolean; data: Review[]; stats: any }>(`/reviews/${parkingId}`);
   }
 
-  async addReview(parkingId: string, rating: number, comment: string) {
-    return this.request<{ success: boolean; message: string; data: Review }>('/reviews', {
+  async addReview(parkingId: string, rating: number, comment?: string) {
+    return this.request<{ success: boolean; message: string; data: Review; parking?: ParkingSpace }>('/reviews', {
       method: 'POST',
-      body: JSON.stringify({ parkingId, rating, comment }),
+      body: JSON.stringify({ parkingId, rating, comment: comment || '' }),
     });
   }
 

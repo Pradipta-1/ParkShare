@@ -196,8 +196,10 @@ export const ParkingCard: React.FC<ParkingCardProps> = ({
             </h3>
             <div className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md shrink-0">
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span className="text-xs font-bold text-amber-500">{parking.rating}</span>
-              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>({parking.reviewCount})</span>
+              <span className="text-xs font-bold text-amber-500">
+                {typeof parking.rating === 'number' ? parking.rating.toFixed(1) : (parking.rating || '5.0')}
+              </span>
+              <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>({parking.reviewCount || 0})</span>
             </div>
           </div>
 

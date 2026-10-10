@@ -48,7 +48,7 @@ export const addVehicle = (req: AuthenticatedRequest, res: Response): void => {
     isDefault,
   };
 
-  dbStore.vehicles.push(newVehicle);
+  dbStore.saveVehicle(newVehicle);
 
   res.status(201).json({
     success: true,
@@ -74,6 +74,6 @@ export const deleteVehicle = (req: AuthenticatedRequest, res: Response): void =>
     return;
   }
 
-  dbStore.vehicles.splice(index, 1);
+  dbStore.deleteVehicle(id);
   res.json({ success: true, message: 'Vehicle removed from garage' });
 };

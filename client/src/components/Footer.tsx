@@ -32,10 +32,13 @@ export const Footer: React.FC = () => {
             <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} max-w-sm text-xs sm:text-sm leading-relaxed`}>
               ParkShare is the peer-to-peer urban parking marketplace connecting drivers with verified local spaces. Save time, eliminate emissions from cruising for parking, and monetize unused driveways.
             </p>
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Network Operational
+                MongoDB Atlas Active
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
+                Database: parkshare
               </span>
               <span className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>ISO 27001 Certified</span>
             </div>

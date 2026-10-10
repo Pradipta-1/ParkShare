@@ -83,11 +83,23 @@ export const DriverDashboardPage: React.FC = () => {
           setActiveBooking(active);
         }
         const vRes = await api.getVehicles();
-        if (vRes.success) {
-          setVehicles(vRes.data);
+        let vList: any[] = [];
+        if (vRes.success && Array.isArray(vRes.data)) {
+          vList = vRes.data;
         }
+        try {
+          const local = JSON.parse(localStorage.getItem('parkshare_custom_vehicles') || '[]');
+          if (Array.isArray(local) && local.length > 0) {
+            const ids = new Set(vList.map((v) => v.id));
+            vList = [...vList, ...local.filter((v: any) => !ids.has(v.id))];
+          }
+        } catch {}
+        setVehicles(vList);
       } catch {
-        // Fallback
+        try {
+          const local = JSON.parse(localStorage.getItem('parkshare_custom_vehicles') || '[]');
+          if (Array.isArray(local)) setVehicles(local);
+        } catch {}
       }
     };
     loadDashboardData();
@@ -97,9 +109,13 @@ export const DriverDashboardPage: React.FC = () => {
     };
     window.addEventListener('parkshare_booking_created', handleBookingSync);
     window.addEventListener('parkshare_booking_cancelled', handleBookingSync);
+    window.addEventListener('parkshare_vehicle_added', handleBookingSync);
+    window.addEventListener('storage', handleBookingSync);
     return () => {
       window.removeEventListener('parkshare_booking_created', handleBookingSync);
       window.removeEventListener('parkshare_booking_cancelled', handleBookingSync);
+      window.removeEventListener('parkshare_vehicle_added', handleBookingSync);
+      window.removeEventListener('storage', handleBookingSync);
     };
   }, []);
 

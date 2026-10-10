@@ -31,7 +31,7 @@ export const register = (req: Request, res: Response): void => {
     walletBalance: 0,
   };
 
-  dbStore.users.push(newUser);
+  dbStore.saveUser(newUser);
   const token = generateToken(newUser);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

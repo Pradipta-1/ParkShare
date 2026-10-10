@@ -41,6 +41,7 @@ import {
   Award,
   Trash2,
   Settings,
+  Star,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { VerificationRequestItem, ReportItem, User, Booking } from '../types';
@@ -230,7 +231,19 @@ export const AdminPanelPage: React.FC = () => {
     fetchAdminData();
     const handleSync = () => fetchAdminData();
     window.addEventListener('parkshare_booking_created', handleSync);
-    return () => window.removeEventListener('parkshare_booking_created', handleSync);
+    window.addEventListener('parkshare_booking_cancelled', handleSync);
+    window.addEventListener('parkshare_space_created', handleSync);
+    window.addEventListener('parkshare_spots_updated', handleSync);
+    window.addEventListener('parkshare_rating_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('parkshare_booking_created', handleSync);
+      window.removeEventListener('parkshare_booking_cancelled', handleSync);
+      window.removeEventListener('parkshare_space_created', handleSync);
+      window.removeEventListener('parkshare_spots_updated', handleSync);
+      window.removeEventListener('parkshare_rating_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
   }, []);
 
   // Save usersList changes to localStorage
@@ -690,8 +703,8 @@ export const AdminPanelPage: React.FC = () => {
       {/* TAB 1: OVERVIEW & PLATFORM METRICS */}
       {activeTab === 'overview' && (
         <div className="space-y-6 sm:space-y-8">
-          {/* Top 4 Metrics Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Top 5 Platform Overview Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Active Users</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white">
@@ -709,6 +722,19 @@ export const AdminPanelPage: React.FC = () => {
             </div>
 
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
+              <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Platform Rating</span>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-amber-400 flex items-center gap-1.5">
+                <Star className="w-5 h-5 fill-amber-400" />
+                <span>
+                  {metricsData?.metrics?.averageRating !== undefined
+                    ? Number(metricsData.metrics.averageRating).toFixed(1)
+                    : '5.0'}
+                </span>
+              </div>
+              <span className="text-[10px] sm:text-[11px] text-amber-400/80 font-semibold block">Live Verified Reviews</span>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Total Bookings</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white">
                 {metricsData?.metrics?.bookingsCount ?? platformBookings.length}
@@ -716,7 +742,7 @@ export const AdminPanelPage: React.FC = () => {
               <span className="text-[10px] sm:text-[11px] text-purple-400 font-semibold block">Completed sessions</span>
             </div>
 
-            <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
+            <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm col-span-2 lg:col-span-1">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Gross Platform GMV</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-400">
                 {metricsData?.metrics?.revenueTotal || '₹0'}
@@ -767,107 +793,101 @@ export const AdminPanelPage: React.FC = () => {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-            {/* Booking Growth Chart (7 cols) */}
-            <div className="lg:col-span-7 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4 overflow-hidden min-w-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-white">Monthly Bookings Volume</h3>
-                  <p className="text-[11px] sm:text-xs text-slate-400">Completed reservations across all cities</p>
+          {(() => {
+            const chartData = metricsData?.bookingGrowthChart || [];
+            const latestMonthItem = chartData.length > 0 ? chartData[chartData.length - 1] : null;
+            const badgeLabel = latestMonthItem
+              ? `${latestMonthItem.bookings.toLocaleString()} ${latestMonthItem.month}`
+              : `${platformBookings.length} Bookings`;
+
+            const zones = metricsData?.occupancyDistribution || [];
+            const topZone = zones.length > 0
+              ? [...zones].sort((a, b) => b.occupancy - a.occupancy)[0]
+              : { zone: 'Platform Hubs', occupancy: 0 };
+
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+                {/* Booking Growth Chart (7 cols) */}
+                <div className="lg:col-span-7 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4 overflow-hidden min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-white">Monthly Bookings Volume</h3>
+                      <p className="text-[11px] sm:text-xs text-slate-400">Completed reservations across all cities</p>
+                    </div>
+                    <span className={`text-[11px] sm:text-xs font-mono font-black px-2.5 py-1 rounded-full border ${
+                      isDark
+                        ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+                        : 'text-purple-900 bg-purple-100 border-2 border-purple-300'
+                    }`}>
+                      {badgeLabel}
+                    </span>
+                  </div>
+
+                  <div className="h-56 sm:h-64 w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <AreaChart data={chartData}>
+                        <defs>
+                          <linearGradient id="adminBookingGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} />
+                        <YAxis stroke="#64748b" fontSize={10} tickLine={false} width={35} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0f172a',
+                            borderColor: '#334155',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="bookings"
+                          stroke="#a855f7"
+                          strokeWidth={2.5}
+                          fillOpacity={1}
+                          fill="url(#adminBookingGrad)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                <span className={`text-[11px] sm:text-xs font-mono font-black px-2.5 py-1 rounded-full border ${
-                  isDark
-                    ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
-                    : 'text-purple-900 bg-purple-100 border-2 border-purple-300'
-                }`}>
-                  6,100 Oct
-                </span>
-              </div>
 
-              <div className="h-56 sm:h-64 w-full pt-2">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <AreaChart
-                    data={
-                      metricsData?.bookingGrowthChart || [
-                        { month: 'May', bookings: 2100 },
-                        { month: 'Jun', bookings: 2800 },
-                        { month: 'Jul', bookings: 3400 },
-                        { month: 'Aug', bookings: 4100 },
-                        { month: 'Sep', bookings: 5300 },
-                        { month: 'Oct', bookings: 6100 },
-                      ]
-                    }
-                  >
-                    <defs>
-                      <linearGradient id="adminBookingGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} width={35} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#0f172a',
-                        borderColor: '#334155',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="bookings"
-                      stroke="#a855f7"
-                      strokeWidth={2.5}
-                      fillOpacity={1}
-                      fill="url(#adminBookingGrad)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
+                {/* Occupancy by Zone (5 cols) */}
+                <div className="lg:col-span-5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4 flex flex-col justify-between overflow-hidden min-w-0">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-white">Occupancy by Zone</h3>
+                    <p className="text-[11px] sm:text-xs text-slate-400">Peak demand distribution by infrastructure category</p>
+                  </div>
 
-            {/* Occupancy by Zone (5 cols) */}
-            <div className="lg:col-span-5 p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4 flex flex-col justify-between overflow-hidden min-w-0">
-              <div>
-                <h3 className="text-sm sm:text-base font-bold text-white">Occupancy by Zone</h3>
-                <p className="text-[11px] sm:text-xs text-slate-400">Peak demand distribution by infrastructure category</p>
-              </div>
+                  <div className="h-52 sm:h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <BarChart data={zones}>
+                        <XAxis dataKey="zone" stroke="#64748b" fontSize={10} tickLine={false} />
+                        <YAxis stroke="#64748b" fontSize={10} tickLine={false} width={30} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0f172a',
+                            borderColor: '#334155',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                          }}
+                        />
+                        <Bar dataKey="occupancy" fill="#10b981" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
 
-              <div className="h-52 sm:h-56 w-full">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <BarChart
-                    data={
-                      metricsData?.occupancyDistribution || [
-                        { zone: 'Commercial', occupancy: 86 },
-                        { zone: 'Transit', occupancy: 82 },
-                        { zone: 'Shopping', occupancy: 78 },
-                        { zone: 'Residential', occupancy: 61 },
-                        { zone: 'Airport', occupancy: 74 },
-                      ]
-                    }
-                  >
-                    <XAxis dataKey="zone" stroke="#64748b" fontSize={10} tickLine={false} />
-                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} width={30} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#0f172a',
-                        borderColor: '#334155',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                      }}
-                    />
-                    <Bar dataKey="occupancy" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                  <div className="text-[11px] sm:text-xs text-slate-400 pt-2 border-t border-slate-800 flex justify-between">
+                    <span>Highest yield: {topZone.zone}</span>
+                    <span className="text-emerald-400 font-semibold">{topZone.occupancy}% avg</span>
+                  </div>
+                </div>
               </div>
-
-              <div className="text-[11px] sm:text-xs text-slate-400 pt-2 border-t border-slate-800 flex justify-between">
-                <span>Highest yield: Commercial District</span>
-                <span className="text-emerald-400 font-semibold">86% avg</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Live Platform Bookings Roster */}
           <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4">

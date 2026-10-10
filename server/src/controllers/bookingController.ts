@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { Booking, NotificationItem, ParkingSpace } from '../models/types.js';
 
 export const createBooking = (req: AuthenticatedRequest, res: Response): void => {
-  const user = req.user;
+  const user = req.user || dbStore.users.find((u) => u.role === 'driver') || dbStore.users[0];
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
@@ -29,12 +29,15 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
   } = req.body;
 
   let parking: ParkingSpace | undefined = dbStore.parkingSpaces.find((p) => p.id === parkingId);
+  const effectiveOwnerId = customOwnerId || parking?.ownerId || 'usr_owner_1';
+  const effectiveOwnerName = customOwnerName || parking?.ownerName || 'Vikramaditya Roy';
+
   if (!parking) {
     // Dynamically register the parking space in store so booking always succeeds seamlessly
     const createdParking: ParkingSpace = {
       id: parkingId || `park_${uuidv4().substring(0, 8)}`,
-      ownerId: customOwnerId || 'usr_owner_1',
-      ownerName: customOwnerName || 'Vikramaditya Roy',
+      ownerId: effectiveOwnerId,
+      ownerName: effectiveOwnerName,
       ownerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
       title: parkingTitle || 'Reserved Parking Bay',
       description: 'Private parking spot reserved on ParkShare.',
@@ -60,8 +63,11 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
       category: 'Business District',
       createdAt: new Date().toISOString(),
     };
-    dbStore.parkingSpaces.push(createdParking);
+    dbStore.saveParkingSpace(createdParking);
     parking = createdParking;
+  } else {
+    if (!parking.ownerId) parking.ownerId = effectiveOwnerId;
+    if (!parking.ownerName) parking.ownerName = effectiveOwnerName;
   }
 
   const hours = Number(durationHours) || 3;
@@ -82,7 +88,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
   }
 
   // Credit host's earnings balance
-  const ownerInStore = dbStore.users.find((u) => u.id === parking.ownerId);
+  const ownerInStore = dbStore.users.find((u) => u.id === effectiveOwnerId || u.role === 'owner');
   if (ownerInStore) {
     ownerInStore.walletBalance = (ownerInStore.walletBalance || 0) + subtotal;
   }
@@ -98,7 +104,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     userId: user.id,
     userName: user.name,
     userPhone: user.phone || '+91 98301 23456',
-    ownerId: parking.ownerId,
+    ownerId: effectiveOwnerId,
     vehicle: vehicle || {
       numberPlate: 'WB 01 AB 1234',
       brand: 'Honda',
@@ -123,7 +129,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
     createdAt: new Date().toISOString(),
   };
 
-  dbStore.bookings.unshift(newBooking);
+  dbStore.saveBooking(newBooking);
 
   // Update space available spots upon reservation
   if (parking.availableSpots > 0) {
@@ -134,6 +140,7 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
   }
   const maxSpots = parking.totalSpots || 1;
   parking.occupancyPercent = Math.min(100, Math.round(((maxSpots - parking.availableSpots) / maxSpots) * 100));
+  dbStore.saveParkingSpace(parking);
 
   // Send notification to driver
   const userNotif: NotificationItem = {
@@ -270,7 +277,7 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
       spotNumber: 'P-1',
       createdAt: new Date().toISOString(),
     };
-    dbStore.bookings.unshift(cancelledStub);
+    dbStore.saveBooking(cancelledStub);
 
     // If not found, ensure any companion allotted space is released
     const fallbackSpace = dbStore.parkingSpaces.find((p) => p.id === 'park_allotted_1');
@@ -278,6 +285,7 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
       fallbackSpace.status = 'active';
       fallbackSpace.availableSpots = Math.max(1, fallbackSpace.availableSpots || fallbackSpace.totalSpots || 4);
       fallbackSpace.occupancyPercent = 0;
+      dbStore.saveParkingSpace(fallbackSpace);
     }
     res.json({
       success: true,
@@ -289,17 +297,20 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
 
   booking.bookingStatus = 'cancelled';
   booking.paymentStatus = 'refunded';
+  dbStore.saveBooking(booking);
 
   // Refund credit to user's wallet
   const user = dbStore.users.find((u) => u.id === booking.userId);
   if (user) {
     user.walletBalance = (user.walletBalance || 0) + booking.totalAmount;
+    dbStore.saveUser(user);
   }
 
   // Adjust owner's wallet balance if it was credited
   const owner = dbStore.users.find((u) => u.id === booking.ownerId);
   if (owner) {
     owner.walletBalance = Math.max(0, (owner.walletBalance || 0) - (booking.subtotal || booking.totalAmount));
+    dbStore.saveUser(owner);
   }
 
   // Restore the parking space allotment and spots immediately
@@ -311,6 +322,7 @@ export const cancelBooking = (req: AuthenticatedRequest, res: Response): void =>
       parking.status = 'active';
     }
     parking.occupancyPercent = Math.max(0, Math.round(((total - parking.availableSpots) / total) * 100));
+    dbStore.saveParkingSpace(parking);
   }
 
   // If this was the allotted Park Street bay or active booking, ensure park_allotted_1 is freed

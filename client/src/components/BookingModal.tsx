@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { QRCodeSVG } from 'qrcode.react';
@@ -15,8 +15,10 @@ import {
   ArrowLeft,
   Navigation,
   CheckCircle2,
+  Plus,
+  AlertCircle,
 } from 'lucide-react';
-import { ParkingSpace, Vehicle } from '../types';
+import { ParkingSpace, Vehicle, VehicleType } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
@@ -47,20 +49,159 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [arrivalTime, setArrivalTime] = useState<string>(defaultArrival);
   const [departureTime, setDepartureTime] = useState<string>(defaultDeparture);
   const [durationHours, setDurationHours] = useState<number>(3);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle>({
-    id: 'veh_default',
-    userId: user?.id || 'usr_driver_1',
-    numberPlate: 'WB 01 AB 1234',
-    brand: 'Honda',
-    model: 'City ZX',
-    color: 'Obsidian Black',
-    type: 'Car',
-    isDefault: true,
-  });
+
+  // Driver Real Vehicles State
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isLoadingVehicles, setIsLoadingVehicles] = useState<boolean>(false);
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [vehicleError, setVehicleError] = useState<string>('');
+
+  // Inline Vehicle Form fields
+  const [newNumberPlate, setNewNumberPlate] = useState<string>('');
+  const [newBrand, setNewBrand] = useState<string>('');
+  const [newModel, setNewModel] = useState<string>('');
+  const [newColor, setNewColor] = useState<string>('');
+  const [newType, setNewType] = useState<VehicleType>('Car');
+  const [isSavingVehicle, setIsSavingVehicle] = useState<boolean>(false);
+
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'Card' | 'Wallet' | 'Net Banking'>('UPI');
   const [upiId, setUpiId] = useState<string>('driver@okaxis');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+
+  // Fetch driver's real registered vehicles
+  const loadDriverVehicles = async () => {
+    setIsLoadingVehicles(true);
+    setVehicleError('');
+    try {
+      let vList: Vehicle[] = [];
+      const res = await api.getVehicles();
+      if (res.success && Array.isArray(res.data)) {
+        vList = res.data;
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem('parkshare_custom_vehicles') || '[]');
+        if (Array.isArray(local) && local.length > 0) {
+          const ids = new Set(vList.map((v) => v.id));
+          vList = [...vList, ...local.filter((v: any) => !ids.has(v.id))];
+        }
+      } catch {}
+
+      setVehicles(vList);
+      if (vList.length > 0) {
+        const primary = vList.find((v) => v.isDefault) || vList[0];
+        setSelectedVehicle((prev) => {
+          if (prev && vList.some((v) => v.id === prev.id)) return prev;
+          return primary;
+        });
+        setShowAddForm(false);
+      } else {
+        setSelectedVehicle(null);
+        setShowAddForm(true);
+      }
+    } catch {
+      try {
+        const local = JSON.parse(localStorage.getItem('parkshare_custom_vehicles') || '[]');
+        if (Array.isArray(local) && local.length > 0) {
+          setVehicles(local);
+          const primary = local.find((v: any) => v.isDefault) || local[0];
+          setSelectedVehicle((prev) => {
+            if (prev && local.some((v: any) => v.id === prev.id)) return prev;
+            return primary;
+          });
+          setShowAddForm(false);
+        } else {
+          setVehicles([]);
+          setSelectedVehicle(null);
+          setShowAddForm(true);
+        }
+      } catch {
+        setVehicles([]);
+        setSelectedVehicle(null);
+        setShowAddForm(true);
+      }
+    } finally {
+      setIsLoadingVehicles(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadDriverVehicles();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleSync = () => {
+      loadDriverVehicles();
+    };
+    window.addEventListener('parkshare_vehicle_added', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('parkshare_vehicle_added', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
+  const handleSaveInlineVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNumberPlate.trim() || !newBrand.trim() || !newModel.trim()) {
+      setVehicleError('Please provide registration number plate, brand, and model.');
+      return;
+    }
+
+    setIsSavingVehicle(true);
+    setVehicleError('');
+    try {
+      const payload = {
+        numberPlate: newNumberPlate.trim().toUpperCase(),
+        brand: newBrand.trim(),
+        model: newModel.trim(),
+        color: newColor.trim() || 'Obsidian Black',
+        type: newType,
+        isDefault: vehicles.length === 0,
+        userId: user?.id || 'usr_driver_1',
+      };
+
+      let createdVehicle: Vehicle;
+      try {
+        const res = await api.addVehicle(payload);
+        if (res.success && res.data) {
+          createdVehicle = res.data;
+        } else {
+          throw new Error('Failed to save vehicle');
+        }
+      } catch {
+        createdVehicle = {
+          id: `veh_${Date.now()}`,
+          ...payload,
+        };
+      }
+
+      try {
+        const stored = JSON.parse(localStorage.getItem('parkshare_custom_vehicles') || '[]');
+        const updated = [createdVehicle, ...stored.filter((v: any) => v.id !== createdVehicle.id)];
+        localStorage.setItem('parkshare_custom_vehicles', JSON.stringify(updated));
+      } catch {}
+
+      const updatedVehicles = [...vehicles.filter((v) => v.id !== createdVehicle.id), createdVehicle];
+      setVehicles(updatedVehicles);
+      setSelectedVehicle(createdVehicle);
+      setShowAddForm(false);
+      setNewNumberPlate('');
+      setNewBrand('');
+      setNewModel('');
+      setNewColor('');
+
+      window.dispatchEvent(new Event('parkshare_vehicle_added'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (err: any) {
+      setVehicleError(err.message || 'Could not save vehicle');
+    } finally {
+      setIsSavingVehicle(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -69,6 +210,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const totalAmount = subtotal + serviceFee;
 
   const handleNext = () => {
+    if (step === 3 && !selectedVehicle) {
+      setVehicleError('You must add or select a vehicle to continue.');
+      setShowAddForm(true);
+      return;
+    }
     setStep((prev) => Math.min(6, prev + 1));
   };
 
@@ -77,6 +223,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleConfirmPayment = async () => {
+    if (!selectedVehicle) {
+      setStep(3);
+      setVehicleError('Please select or add a vehicle to continue.');
+      return;
+    }
     setIsProcessing(true);
     try {
       const payload = {
@@ -112,6 +263,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         }
 
         window.dispatchEvent(new Event('parkshare_booking_created'));
+        window.dispatchEvent(new Event('parkshare_spots_updated'));
+        window.dispatchEvent(new Event('storage'));
         setStep(6);
         try {
           confetti({
@@ -168,6 +321,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       window.dispatchEvent(new Event('parkshare_booking_created'));
+      window.dispatchEvent(new Event('parkshare_spots_updated'));
+      window.dispatchEvent(new Event('storage'));
       setConfirmedBooking(mockBooking);
       setStep(6);
     } finally {
@@ -413,93 +568,278 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         {/* Step 3: Select Vehicle */}
         {step === 3 && (
           <div className="p-6 space-y-4">
-            <label className={`text-xs font-semibold block ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Select vehicle for this reservation
-            </label>
-
-            <div className="space-y-2.5">
-              {[
-                {
-                  id: 'veh_1',
-                  brand: 'Honda',
-                  model: 'City ZX',
-                  numberPlate: 'WB 01 AB 1234',
-                  color: 'Obsidian Black',
-                  type: 'Car' as const,
-                },
-                {
-                  id: 'veh_2',
-                  brand: 'Ather',
-                  model: '450X Gen 3',
-                  numberPlate: 'WB 02 CD 5678',
-                  color: 'Space Grey',
-                  type: 'EV' as const,
-                },
-                {
-                  id: 'veh_3',
-                  brand: 'Hyundai',
-                  model: 'Creta SX(O)',
-                  numberPlate: 'WB 06 EF 9012',
-                  color: 'Polar White',
-                  type: 'SUV' as const,
-                },
-              ].map((veh) => {
-                const isSelected = selectedVehicle.numberPlate === veh.numberPlate;
-                return (
-                  <div
-                    key={veh.id}
-                    onClick={() =>
-                      setSelectedVehicle({
-                        ...veh,
-                        userId: user?.id || 'usr_driver_1',
-                      })
-                    }
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                      isSelected
-                        ? isDark
-                          ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30'
-                          : 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/30'
-                        : isDark
-                          ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                          : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-9 h-9 rounded-xl border flex items-center justify-center ${
-                          isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
-                        }`}
-                      >
-                        <Car className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                          {veh.brand} {veh.model}
-                        </div>
-                        <div className={`text-[11px] font-mono font-semibold tracking-wider ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                          {veh.numberPlate}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>
-                        {veh.type}
-                      </span>
-                      {isSelected && <Check className={`w-4 h-4 stroke-[3] ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />}
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="flex items-center justify-between">
+              <div>
+                <label className={`text-xs font-bold block ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                  Choose Your Vehicle
+                </label>
+                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Only vehicles registered to your driver account can be used for this parking spot.
+                </p>
+              </div>
+              {vehicles.length > 0 && !showAddForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(true)}
+                  className={`text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                    isDark ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Vehicle</span>
+                </button>
+              )}
             </div>
 
-            <button
-              type="button"
-              onClick={handleNext}
-              className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
-            >
-              <span>Review Booking</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {vehicleError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{vehicleError}</span>
+              </div>
+            )}
+
+            {isLoadingVehicles && vehicles.length === 0 ? (
+              <div className="py-8 text-center space-y-2">
+                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Loading your vehicles...</p>
+              </div>
+            ) : null}
+
+            {/* List of driver's added vehicles */}
+            {vehicles.length > 0 && (
+              <div className="space-y-2.5">
+                {vehicles.map((veh) => {
+                  const isSelected = selectedVehicle?.id === veh.id || selectedVehicle?.numberPlate === veh.numberPlate;
+                  return (
+                    <div
+                      key={veh.id}
+                      onClick={() => {
+                        setSelectedVehicle(veh);
+                        setVehicleError('');
+                      }}
+                      className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? isDark
+                            ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30'
+                            : 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/30'
+                          : isDark
+                            ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center ${
+                            isDark ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <Car className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {veh.brand} {veh.model}
+                          </div>
+                          <div className={`text-[11px] font-mono font-semibold tracking-wider ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                            {veh.numberPlate}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {veh.color && (
+                          <span className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {veh.color}
+                          </span>
+                        )}
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>
+                          {veh.type}
+                        </span>
+                        {isSelected && <Check className={`w-4 h-4 stroke-[3] ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* If no vehicles registered OR Add Vehicle form is toggled */}
+            {(vehicles.length === 0 || showAddForm) && (
+              <div className={`p-4 rounded-2xl border space-y-3.5 ${
+                vehicles.length === 0
+                  ? isDark ? 'bg-amber-500/5 border-amber-500/30' : 'bg-amber-50/60 border-amber-300'
+                  : isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                {vehicles.length === 0 && (
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className={`w-4 h-4 mt-0.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                    <div>
+                      <h4 className={`text-xs font-bold ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                        No vehicle registered in your driver account
+                      </h4>
+                      <p className={`text-[11px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                        You must add a vehicle to continue the reservation. Enter your vehicle details below or register it in the Add Vehicle section.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {vehicles.length === 0 ? 'Register Vehicle to Continue' : 'Add Another Vehicle'}
+                  </span>
+                  {vehicles.length > 0 && showAddForm && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(false)}
+                      className={`text-xs ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}`}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleSaveInlineVehicle} className="space-y-3">
+                  <div>
+                    <label className={`text-[11px] font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                      Registration Number Plate *
+                    </label>
+                    <input
+                      type="text"
+                      value={newNumberPlate}
+                      onChange={(e) => setNewNumberPlate(e.target.value.toUpperCase())}
+                      placeholder="e.g. WB 01 AB 1234"
+                      required
+                      className={`w-full px-3 py-2 rounded-xl border text-xs font-mono font-bold tracking-wider outline-none focus:border-emerald-500 ${
+                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className={`text-[11px] font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Brand / Make *
+                      </label>
+                      <input
+                        type="text"
+                        value={newBrand}
+                        onChange={(e) => setNewBrand(e.target.value)}
+                        placeholder="e.g. Honda"
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`text-[11px] font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Model *
+                      </label>
+                      <input
+                        type="text"
+                        value={newModel}
+                        onChange={(e) => setNewModel(e.target.value)}
+                        placeholder="e.g. City ZX"
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className={`text-[11px] font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Color
+                      </label>
+                      <input
+                        type="text"
+                        value={newColor}
+                        onChange={(e) => setNewColor(e.target.value)}
+                        placeholder="e.g. Obsidian Black"
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none focus:border-emerald-500 ${
+                          isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`text-[11px] font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        Vehicle Type
+                      </label>
+                      <select
+                        value={newType}
+                        onChange={(e) => setNewType(e.target.value as VehicleType)}
+                        className={`w-full px-3 py-2 rounded-xl border text-xs outline-none cursor-pointer focus:border-emerald-500 ${
+                          isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        }`}
+                      >
+                        <option value="Car">Car</option>
+                        <option value="SUV">SUV</option>
+                        <option value="EV">EV</option>
+                        <option value="Bike">Bike</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="submit"
+                      disabled={isSavingVehicle}
+                      className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                      <span>{isSavingVehicle ? 'Saving Vehicle...' : 'Save & Select Vehicle'}</span>
+                    </button>
+                  </div>
+                </form>
+
+                {vehicles.length === 0 && (
+                  <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                    <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>
+                      Prefer adding from Garage?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        navigate('/vehicles');
+                      }}
+                      className={`font-semibold underline flex items-center gap-1 cursor-pointer ${
+                        isDark ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'
+                      }`}
+                    >
+                      <span>Add Vehicle section</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Review Booking Button */}
+            {selectedVehicle ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="w-full mt-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Review Booking</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <div className="space-y-1 mt-2">
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-bold text-sm cursor-not-allowed opacity-60 flex items-center justify-center gap-2"
+                >
+                  <span>Add a vehicle above to continue</span>
+                </button>
+                <p className={`text-[10px] text-center ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  You must add a vehicle to continue the reservation process.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -530,7 +870,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
                 <div>
                   <span className={`block text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Vehicle</span>
-                  <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedVehicle.brand} ({selectedVehicle.numberPlate})</span>
+                  <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.numberPlate})` : 'No vehicle selected'}
+                  </span>
                 </div>
                 <div>
                   <span className={`block text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Host</span>
@@ -692,7 +1034,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Vehicle</span>
-                <span className={`font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedVehicle.numberPlate}</span>
+                <span className={`font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{selectedVehicle?.numberPlate || 'N/A'}</span>
               </div>
             </div>
 
