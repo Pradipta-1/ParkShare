@@ -54,6 +54,37 @@ export const SettingsPage: React.FC = () => {
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [profileStats, setProfileStats] = useState<{
+    bookingsCount: number;
+    activeCount: number;
+    walletBalance: number;
+  }>({
+    bookingsCount: 0,
+    activeCount: 0,
+    walletBalance: user?.walletBalance || 0,
+  });
+
+  React.useEffect(() => {
+    const loadProfileStats = async () => {
+      try {
+        const res = await api.getBookings();
+        if (res.success && res.data) {
+          const active = res.data.filter(
+            (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+          ).length;
+          setProfileStats({
+            bookingsCount: res.data.length,
+            activeCount: active,
+            walletBalance: user?.walletBalance || 0,
+          });
+        }
+      } catch {}
+    };
+    loadProfileStats();
+    const handleSync = () => loadProfileStats();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    return () => window.removeEventListener('parkshare_booking_created', handleSync);
+  }, [user]);
 
   // Synchronize form state whenever user changes
   React.useEffect(() => {
@@ -170,6 +201,36 @@ export const SettingsPage: React.FC = () => {
             <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Update your photo, personal details, and account preferences.
             </p>
+          </div>
+        </div>
+
+        {/* Real-Time Profile Activity & Booking Stats */}
+        <div className={`grid grid-cols-3 gap-2 p-2.5 sm:p-3 rounded-2xl border ${
+          isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-100 border-slate-200'
+        }`}>
+          <div className="text-center">
+            <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              {user?.role === 'admin' ? 'Platform Bookings' : user?.role === 'owner' ? 'Host Reservations' : 'Total Bookings'}
+            </span>
+            <span className={`text-base sm:text-lg font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {profileStats.bookingsCount}
+            </span>
+          </div>
+          <div className="text-center border-x border-slate-800/60">
+            <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Active Passes
+            </span>
+            <span className="text-base sm:text-lg font-black text-emerald-400">
+              {profileStats.activeCount}
+            </span>
+          </div>
+          <div className="text-center">
+            <span className={`block text-[10px] uppercase font-bold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Wallet Balance
+            </span>
+            <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
+              ₹{user?.walletBalance ?? 0}
+            </span>
           </div>
         </div>
 

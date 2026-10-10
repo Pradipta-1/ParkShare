@@ -39,6 +39,13 @@ export const BookingsPage: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
+    const handleSync = () => fetchBookings();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    window.addEventListener('parkshare_booking_cancelled', handleSync);
+    return () => {
+      window.removeEventListener('parkshare_booking_created', handleSync);
+      window.removeEventListener('parkshare_booking_cancelled', handleSync);
+    };
   }, []);
 
   const handleCancel = async (id: string) => {
@@ -60,7 +67,14 @@ export const BookingsPage: React.FC = () => {
     }
   };
 
-  const filtered = activeFilter === 'all' ? bookings : bookings.filter((b) => b.bookingStatus === activeFilter);
+  const filtered =
+    activeFilter === 'all'
+      ? bookings
+      : bookings.filter((b) =>
+          activeFilter === 'active'
+            ? b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+            : b.bookingStatus === activeFilter
+        );
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

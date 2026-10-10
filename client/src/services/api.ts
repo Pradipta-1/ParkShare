@@ -311,6 +311,13 @@ class ApiService {
   // Bookings
   async createBooking(bookingData: {
     parkingId: string;
+    parkingTitle?: string;
+    parkingAddress?: string;
+    parkingImage?: string;
+    parkingLocation?: any;
+    pricePerHour?: number;
+    ownerId?: string;
+    ownerName?: string;
     date: string;
     arrivalTime: string;
     departureTime: string;
@@ -318,10 +325,62 @@ class ApiService {
     vehicle: any;
     paymentMethod: string;
   }) {
-    return this.request<{ success: boolean; message: string; data: Booking }>('/bookings', {
-      method: 'POST',
-      body: JSON.stringify(bookingData),
-    });
+    try {
+      const res = await this.request<{ success: boolean; message: string; data: Booking }>('/bookings', {
+        method: 'POST',
+        body: JSON.stringify(bookingData),
+      });
+      if (res.data) {
+        const stored: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+        localStorage.setItem(
+          'parkshare_custom_bookings',
+          JSON.stringify([res.data, ...stored.filter((b) => b.id !== res.data.id)])
+        );
+      }
+      return res;
+    } catch {
+      const mockBooking: Booking = {
+        id: `book_${Date.now().toString(36)}`,
+        bookingCode: `PS-${Math.floor(100000 + Math.random() * 900000)}`,
+        parkingId: bookingData.parkingId,
+        parkingTitle: bookingData.parkingTitle || 'Reserved Parking Bay',
+        parkingAddress: bookingData.parkingAddress || 'Kolkata Metro Bay',
+        parkingImage: bookingData.parkingImage || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+        parkingLocation: bookingData.parkingLocation || { lat: 22.5512, lng: 88.3619 },
+        userId: 'usr_driver_1',
+        userName: 'Rahul Sen',
+        userPhone: '+91 98301 23456',
+        ownerId: bookingData.ownerId || 'usr_owner_1',
+        vehicle: bookingData.vehicle || {
+          numberPlate: 'WB 01 AB 1234',
+          brand: 'Honda',
+          model: 'City',
+          type: 'Car',
+        },
+        date: bookingData.date,
+        arrivalTime: bookingData.arrivalTime,
+        departureTime: bookingData.departureTime,
+        durationHours: bookingData.durationHours,
+        pricePerHour: bookingData.pricePerHour || 50,
+        subtotal: (bookingData.pricePerHour || 50) * bookingData.durationHours,
+        serviceFee: 10,
+        totalAmount: (bookingData.pricePerHour || 50) * bookingData.durationHours + 10,
+        paymentStatus: 'paid',
+        bookingStatus: 'confirmed',
+        paymentMethod: bookingData.paymentMethod as any,
+        transactionId: `TXN-${Math.floor(100000000 + Math.random() * 900000000)}`,
+        qrCodeData: `PARKSHARE::${bookingData.parkingId}::SPOT_P24`,
+        spotNumber: 'Bay P-24',
+        createdAt: new Date().toISOString(),
+      };
+      const stored: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+      localStorage.setItem('parkshare_custom_bookings', JSON.stringify([mockBooking, ...stored]));
+      return {
+        success: true,
+        message: 'Booking created',
+        data: mockBooking,
+      };
+    }
   }
 
   async getBookings(status?: string, asOwner?: boolean) {
@@ -329,7 +388,71 @@ class ApiService {
     if (status) params.set('status', status);
     if (asOwner) params.set('asOwner', 'true');
     const queryStr = params.toString() ? `?${params.toString()}` : '';
-    return this.request<{ success: boolean; count: number; data: Booking[] }>(`/bookings${queryStr}`);
+
+    const getCancelledIds = (): string[] => {
+      try {
+        return JSON.parse(localStorage.getItem('parkshare_cancelled_booking_ids') || '[]');
+      } catch {
+        return [];
+      }
+    };
+
+    const cancelledIds = getCancelledIds();
+
+    const applyCancellations = (list: Booking[]): Booking[] => {
+      return list.map((b) => {
+        if (cancelledIds.includes(b.id) || (b.bookingCode && cancelledIds.includes(b.bookingCode))) {
+          return { ...b, bookingStatus: 'cancelled' as const, paymentStatus: 'refunded' as const };
+        }
+        return b;
+      });
+    };
+
+    try {
+      const res = await this.request<{ success: boolean; count: number; data: Booking[] }>(`/bookings${queryStr}`);
+      const storedRaw: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+      const stored = applyCancellations(storedRaw);
+
+      if (res.success && Array.isArray(res.data)) {
+        let all = applyCancellations(res.data);
+
+        if (stored.length > 0) {
+          const existingIds = new Set(all.map((b) => b.id));
+          const toAdd = stored.filter((b) => !existingIds.has(b.id));
+          all = [...toAdd, ...all];
+        }
+
+        if (status && status !== 'all') {
+          all = all.filter((b) =>
+            status === 'active'
+              ? b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+              : b.bookingStatus === status
+          );
+        }
+
+        return { success: true, count: all.length, data: all };
+      }
+
+      const filtered = status && status !== 'all'
+        ? stored.filter((b) =>
+            status === 'active'
+              ? b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+              : b.bookingStatus === status
+          )
+        : stored;
+      return { success: true, count: filtered.length, data: filtered };
+    } catch {
+      const storedRaw: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+      const stored = applyCancellations(storedRaw);
+      const filtered = status && status !== 'all'
+        ? stored.filter((b) =>
+            status === 'active'
+              ? b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
+              : b.bookingStatus === status
+          )
+        : stored;
+      return { success: true, count: filtered.length, data: filtered };
+    }
   }
 
   async getBookingById(id: string) {
@@ -343,19 +466,66 @@ class ApiService {
         list.push(parkingId);
         localStorage.setItem('parkshare_cancelled_allotments', JSON.stringify(list));
       }
+
+      // Reconcile and free up spot in parkshare_custom_spaces
+      const storedSpaces: ParkingSpace[] = JSON.parse(localStorage.getItem('parkshare_custom_spaces') || '[]');
+      if (storedSpaces.length > 0) {
+        const updated = storedSpaces.map((s) => {
+          if (s.id === parkingId) {
+            const total = s.totalSpots || 1;
+            const newAvail = Math.min(total, (s.availableSpots ?? 0) + 1);
+            return {
+              ...s,
+              availableSpots: newAvail,
+              occupancyPercent: Math.max(0, Math.round(((total - newAvail) / total) * 100)),
+              status: newAvail > 0 && s.status === 'allotted' ? ('active' as const) : s.status,
+            };
+          }
+          return s;
+        });
+        localStorage.setItem('parkshare_custom_spaces', JSON.stringify(updated));
+      }
     } catch {}
   }
 
   async cancelBooking(id: string) {
+    // 1. Persist cancellation locally immediately so it never reverts on refresh or navigation
+    let foundParkingId: string | undefined;
+    try {
+      const stored: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+      const target = stored.find((b) => b.id === id || b.bookingCode === id);
+      if (target) foundParkingId = target.parkingId;
+      const updated = stored.map((b) =>
+        b.id === id || b.bookingCode === id
+          ? { ...b, bookingStatus: 'cancelled' as const, paymentStatus: 'refunded' as const }
+          : b
+      );
+      localStorage.setItem('parkshare_custom_bookings', JSON.stringify(updated));
+
+      const cancelledIds: string[] = JSON.parse(localStorage.getItem('parkshare_cancelled_booking_ids') || '[]');
+      if (!cancelledIds.includes(id)) {
+        cancelledIds.push(id);
+        localStorage.setItem('parkshare_cancelled_booking_ids', JSON.stringify(cancelledIds));
+      }
+    } catch {}
+
+    if (foundParkingId) {
+      this.recordCancelledAllotment(foundParkingId);
+    }
+
+    // Dispatch global events so all components across the app sync immediately
+    window.dispatchEvent(new CustomEvent('parkshare_booking_cancelled', { detail: { id } }));
+    window.dispatchEvent(new Event('parkshare_booking_created'));
+
     try {
       const res = await this.request<{ success: boolean; message: string; data: Booking }>(`/bookings/${id}/cancel`, {
         method: 'PUT',
       });
-      const parkingId = res.data?.parkingId || (id === 'demo_live_pass_01' || id === 'book_active_1' ? 'park_allotted_1' : id);
+      const parkingId = res.data?.parkingId || foundParkingId || (id === 'demo_live_pass_01' || id === 'book_active_1' ? 'park_allotted_1' : id);
       this.recordCancelledAllotment(parkingId);
       return res;
     } catch {
-      const parkingId = id === 'demo_live_pass_01' || id === 'book_active_1' ? 'park_allotted_1' : id;
+      const parkingId = foundParkingId || (id === 'demo_live_pass_01' || id === 'book_active_1' ? 'park_allotted_1' : id);
       this.recordCancelledAllotment(parkingId);
       return {
         success: true,

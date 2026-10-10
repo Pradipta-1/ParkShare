@@ -111,13 +111,14 @@ export const updateProfile = (req: AuthenticatedRequest, res: Response): void =>
   }
 
   const currentUser = req.user;
-  const { name, phone, avatar, bio, city, email } = req.body;
+  const { name, phone, avatar, bio, city, email, walletBalance } = req.body;
   if (name && name.trim()) currentUser.name = name.trim();
   if (phone !== undefined) currentUser.phone = phone.trim();
   if (avatar && avatar.trim()) currentUser.avatar = avatar.trim();
   if (bio !== undefined) currentUser.bio = bio.trim();
   if (city !== undefined) currentUser.city = city.trim();
   if (email && email.trim()) currentUser.email = email.trim();
+  if (typeof walletBalance === 'number') currentUser.walletBalance = walletBalance;
 
   // Sync with in-memory store
   const userInStore = dbStore.users.find((u) => u.id === currentUser.id);
@@ -128,6 +129,7 @@ export const updateProfile = (req: AuthenticatedRequest, res: Response): void =>
     if (bio !== undefined) userInStore.bio = bio.trim();
     if (city !== undefined) userInStore.city = city.trim();
     if (email && email.trim()) userInStore.email = email.trim();
+    if (typeof walletBalance === 'number') userInStore.walletBalance = walletBalance;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { dbStore } from '../store/dbStore.js';
 
 export const getAdminMetrics = (_req: Request, res: Response): void => {
-  const totalRevenue = dbStore.bookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+  const validBookings = dbStore.bookings.filter((b) => b.bookingStatus !== 'cancelled');
+  const totalRevenue = validBookings.reduce((sum, b) => sum + (b.totalAmount || 0), 0);
   const formattedRevenue = totalRevenue >= 100000
     ? `₹${(totalRevenue / 100000).toFixed(1)}L`
     : `₹${totalRevenue.toLocaleString()}`;
@@ -10,26 +11,36 @@ export const getAdminMetrics = (_req: Request, res: Response): void => {
   const metrics = {
     usersCount: dbStore.users.length,
     parkingSpacesCount: dbStore.parkingSpaces.length,
-    bookingsCount: dbStore.bookings.length,
+    bookingsCount: validBookings.length,
     revenueTotal: formattedRevenue,
     pendingVerifications: dbStore.verificationRequests.filter((v) => v.status === 'pending').length,
     openReports: dbStore.reports.filter((r) => r.status === 'Open' || r.status === 'Investigating').length,
   };
 
   const months = ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
-  const bookingGrowthChart = months.map((month) => ({
-    month,
-    bookings: 0,
-    revenue: 0,
-  }));
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const bookingGrowthChart = months.map((month) => {
+    const list = validBookings.filter((b) => {
+      const d = new Date(b.date);
+      return !isNaN(d.getTime()) && monthNames[d.getMonth()] === month;
+    });
+    return {
+      month,
+      bookings: list.length,
+      revenue: list.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0),
+    };
+  });
 
-  const occupancyDistribution = [
-    { zone: 'Commercial District', occupancy: 0 },
-    { zone: 'Transit Stations', occupancy: 0 },
-    { zone: 'Shopping Malls', occupancy: 0 },
-    { zone: 'Residential Driveways', occupancy: 0 },
-    { zone: 'Airport Parking', occupancy: 0 },
-  ];
+  const zones = ['Commercial District', 'Transit Stations', 'Shopping Malls', 'Residential Driveways', 'Airport Parking'];
+  const occupancyDistribution = zones.map((zone) => {
+    const spacesInZone = dbStore.parkingSpaces.filter(
+      (p) => p.category?.toLowerCase() === zone.toLowerCase() || p.description?.toLowerCase().includes(zone.toLowerCase())
+    );
+    const avgOcc = spacesInZone.length > 0
+      ? Math.round(spacesInZone.reduce((acc, curr) => acc + (curr.occupancyPercent || 0), 0) / spacesInZone.length)
+      : 0;
+    return { zone, occupancy: avgOcc };
+  });
 
   res.json({
     success: true,

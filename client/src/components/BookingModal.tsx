@@ -38,7 +38,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   defaultArrival = '02:00 PM',
   defaultDeparture = '05:00 PM',
 }) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
@@ -79,20 +79,40 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const handleConfirmPayment = async () => {
     setIsProcessing(true);
     try {
-      const res = await api.createBooking({
+      const payload = {
         parkingId: parking.id,
+        parkingTitle: parking.title,
+        parkingAddress: parking.address,
+        parkingImage: (parking.images && parking.images[0]) || (parking as any).image || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+        parkingLocation: parking.location || { lat: 22.5512, lng: 88.3619 },
+        pricePerHour: parking.pricePerHour || 50,
+        ownerId: parking.ownerId || 'usr_owner_1',
+        ownerName: parking.ownerName || 'Vikramaditya Roy',
         date,
         arrivalTime,
         departureTime,
         durationHours,
         vehicle: selectedVehicle,
         paymentMethod,
-      });
+      };
 
-      if (res.success) {
+      const res = await api.createBooking(payload);
+
+      if (res.success && res.data) {
         setConfirmedBooking(res.data);
+        // Persist booking to local storage cache as well
+        try {
+          const stored = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+          localStorage.setItem('parkshare_custom_bookings', JSON.stringify([res.data, ...stored.filter((b: any) => b.id !== res.data.id)]));
+        } catch {}
+
+        // Deduct from driver wallet if paying via Wallet
+        if (paymentMethod === 'Wallet' && user) {
+          updateUser({ walletBalance: Math.max(0, (user.walletBalance || 0) - totalAmount) });
+        }
+
+        window.dispatchEvent(new Event('parkshare_booking_created'));
         setStep(6);
-        // Delight confetti
         try {
           confetti({
             particleCount: 80,
@@ -102,20 +122,52 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         } catch {
           // Ignore
         }
+      } else {
+        throw new Error('Booking failed');
       }
     } catch {
-      // Local fallback simulation if server error
+      // Local fallback simulation if server is unreachable
       const mockBooking = {
+        id: `book_${Date.now().toString(36)}`,
         bookingCode: `PS-${Math.floor(100000 + Math.random() * 900000)}`,
+        parkingId: parking.id,
         parkingTitle: parking.title,
+        parkingAddress: parking.address,
+        parkingImage: (parking.images && parking.images[0]) || (parking as any).image || 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80',
+        parkingLocation: parking.location || { lat: 22.5512, lng: 88.3619 },
+        userId: user?.id || 'usr_driver_1',
+        userName: user?.name || 'Rahul Sen',
+        userPhone: user?.phone || '+91 98301 23456',
+        ownerId: parking.ownerId || 'usr_owner_1',
+        ownerName: parking.ownerName || 'Vikramaditya Roy',
         date,
         arrivalTime,
         departureTime,
+        durationHours,
         vehicle: selectedVehicle,
+        pricePerHour: parking.pricePerHour || 50,
+        subtotal,
+        serviceFee,
         totalAmount,
-        spotNumber: 'P-24',
-        qrCodeData: `PARKSHARE::MOCK::USER_${user?.id}::SPOT_P24`,
+        paymentStatus: 'paid',
+        bookingStatus: 'confirmed',
+        paymentMethod,
+        spotNumber: 'Bay P-24',
+        transactionId: `TXN-${Math.floor(100000000 + Math.random() * 900000000)}`,
+        qrCodeData: `PARKSHARE::${parking.id}::USER_${user?.id}::SPOT_P24`,
+        createdAt: new Date().toISOString(),
       };
+
+      try {
+        const stored = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+        localStorage.setItem('parkshare_custom_bookings', JSON.stringify([mockBooking, ...stored]));
+      } catch {}
+
+      if (paymentMethod === 'Wallet' && user) {
+        updateUser({ walletBalance: Math.max(0, (user.walletBalance || 0) - totalAmount) });
+      }
+
+      window.dispatchEvent(new Event('parkshare_booking_created'));
       setConfirmedBooking(mockBooking);
       setStep(6);
     } finally {

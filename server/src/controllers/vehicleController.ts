@@ -58,8 +58,16 @@ export const addVehicle = (req: AuthenticatedRequest, res: Response): void => {
 };
 
 export const deleteVehicle = (req: AuthenticatedRequest, res: Response): void => {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ success: false, message: 'Unauthorized' });
+    return;
+  }
+
   const { id } = req.params;
-  const index = dbStore.vehicles.findIndex((v) => v.id === id);
+  const index = dbStore.vehicles.findIndex(
+    (v) => v.id === id && (v.userId === user.id || user.role === 'admin')
+  );
 
   if (index === -1) {
     res.status(404).json({ success: false, message: 'Vehicle not found' });

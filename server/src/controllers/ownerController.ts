@@ -4,21 +4,40 @@ import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { PayoutItem } from '../models/types.js';
 
+const reconcileSpaces = () => {
+  for (const space of dbStore.parkingSpaces) {
+    const activeBookings = dbStore.bookings.filter(
+      (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
+    );
+    const occupied = activeBookings.length;
+    const total = space.totalSpots || 1;
+    space.availableSpots = Math.max(0, total - occupied);
+    space.occupancyPercent = Math.min(100, Math.round((occupied / total) * 100));
+    if (space.availableSpots > 0 && space.status === 'allotted') {
+      space.status = 'active';
+    } else if (space.availableSpots === 0 && space.status === 'active') {
+      space.status = 'allotted';
+    }
+  }
+};
+
 export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void => {
+  reconcileSpaces();
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
   const mySpaces = dbStore.parkingSpaces.filter((p) => p.ownerId === ownerId);
   const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
+  const validBookings = myBookings.filter((b) => b.bookingStatus !== 'cancelled');
   const myPayouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
 
-  const totalEarnings = myBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
+  const totalEarnings = validBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayEarnings = myBookings
+  const todayEarnings = validBookings
     .filter((b) => b.date === todayStr)
     .reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
 
-  const activeBookingsCount = myBookings.filter(
+  const activeBookingsCount = validBookings.filter(
     (b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed'
   ).length;
 
@@ -30,20 +49,41 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
     ? Number((mySpaces.reduce((acc, curr) => acc + (curr.rating || 5), 0) / mySpaces.length).toFixed(1))
     : 5.0;
 
-  const pendingPayout = myPayouts
-    .filter((p) => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0);
-
   const paidOut = myPayouts
     .filter((p) => p.status === 'completed')
     .reduce((sum, p) => sum + p.amount, 0);
 
-  // Dynamic revenue chart by day of the week
+  const explicitPending = myPayouts
+    .filter((p) => p.status === 'pending')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const pendingPayout = explicitPending > 0 ? explicitPending : Math.max(0, totalEarnings - paidOut);
+
+  // Dynamic revenue chart by day of the week computed from active & completed bookings
+  const dayMap: Record<string, { revenue: number; bookings: number }> = {
+    Mon: { revenue: 0, bookings: 0 },
+    Tue: { revenue: 0, bookings: 0 },
+    Wed: { revenue: 0, bookings: 0 },
+    Thu: { revenue: 0, bookings: 0 },
+    Fri: { revenue: 0, bookings: 0 },
+    Sat: { revenue: 0, bookings: 0 },
+    Sun: { revenue: 0, bookings: 0 },
+  };
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  validBookings.forEach((b) => {
+    const d = new Date(b.date);
+    const dayName = !isNaN(d.getTime()) ? dayNames[d.getDay()] : 'Mon';
+    if (dayMap[dayName]) {
+      dayMap[dayName].revenue += b.subtotal || b.totalAmount || 0;
+      dayMap[dayName].bookings += 1;
+    }
+  });
+
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const earningsChart = days.map((day) => ({
     day,
-    revenue: 0,
-    bookings: 0,
+    revenue: dayMap[day].revenue,
+    bookings: dayMap[day].bookings,
   }));
 
   // Occupancy heatmap by hour
@@ -69,12 +109,13 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
       },
       earningsChart,
       occupancyChart,
-      recentBookings: myBookings.slice(0, 5),
+      recentBookings: validBookings.slice(0, 5),
     },
   });
 };
 
 export const getOwnerSpaces = (req: AuthenticatedRequest, res: Response): void => {
+  reconcileSpaces();
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
@@ -129,9 +170,11 @@ export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void 
 
   const payouts = dbStore.payouts.filter((p) => p.ownerId === ownerId);
   const myBookings = dbStore.bookings.filter((b) => b.ownerId === ownerId);
-  const totalEarnings = myBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
-  const pendingPayout = payouts.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  const validBookings = myBookings.filter((b) => b.bookingStatus !== 'cancelled');
+  const totalEarnings = validBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);
   const paidOut = payouts.filter((p) => p.status === 'completed').reduce((sum, p) => sum + p.amount, 0);
+  const explicitPending = payouts.filter((p) => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0);
+  const pendingPayout = explicitPending > 0 ? explicitPending : Math.max(0, totalEarnings - paidOut);
 
   res.json({
     success: true,

@@ -17,6 +17,7 @@ router.put('/spaces/:spaceId/status', authenticate, toggleSpaceStatus);
 router.put('/calendar/:spaceId', authenticate, updateCalendar);
 router.put('/spaces/:spaceId/calendar', authenticate, updateCalendar);
 router.get('/payouts', authenticate, getOwnerPayouts);
+router.post('/payouts', authenticate, requestPayout);
 router.post('/payouts/request', authenticate, requestPayout);
 
 export default router;

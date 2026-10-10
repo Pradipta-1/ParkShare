@@ -6,9 +6,17 @@ import { MessageItem } from '../models/types.js';
 
 export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): void => {
   const { bookingId } = req.params;
-  const booking = dbStore.bookings.find((b) => b.id === bookingId || b.bookingCode === bookingId);
+  const user = req.user;
+  let booking = dbStore.bookings.find((b) => b.id === bookingId || b.bookingCode === bookingId);
+  if (!booking && user) {
+    booking = dbStore.bookings.find((b) => b.userId === user.id || b.ownerId === user.id) || dbStore.bookings[0];
+  }
 
-  const messages = dbStore.messages.filter((m) => m.bookingId === bookingId || (booking && m.bookingId === booking.id));
+  const messages = dbStore.messages.filter(
+    (m) => m.bookingId === bookingId || (booking && (m.bookingId === booking.id || m.bookingId === booking.bookingCode))
+  );
+
+  const owner = booking ? dbStore.users.find((u) => u.id === booking.ownerId) : null;
 
   res.json({
     success: true,
@@ -23,6 +31,7 @@ export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): 
           spotNumber: booking.spotNumber,
           driverName: booking.userName,
           ownerId: booking.ownerId,
+          ownerName: owner?.name || 'Vikramaditya Roy',
         }
       : null,
     data: messages,
@@ -45,18 +54,41 @@ export const sendMessage = (req: AuthenticatedRequest, res: Response): void => {
   const now = new Date();
   const timestamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
+  const booking = dbStore.bookings.find((b) => b.id === bookingId || b.bookingCode === bookingId);
+  const targetReceiver =
+    receiverId ||
+    (booking
+      ? user.role === 'driver'
+        ? booking.ownerId
+        : booking.userId
+      : user.role === 'driver'
+      ? 'usr_owner_1'
+      : 'usr_driver_1');
+
   const newMessage: MessageItem = {
     id: `msg_${uuidv4().substring(0, 8)}`,
-    bookingId,
+    bookingId: booking ? booking.id : bookingId,
     senderId: user.id,
     senderName: user.name,
     senderRole: user.role,
-    receiverId: receiverId || 'usr_owner_1',
+    receiverId: targetReceiver,
     text,
     timestamp,
   };
 
   dbStore.messages.push(newMessage);
+
+  // Dispatch real-time notification to receiver
+  dbStore.notifications.unshift({
+    id: `notif_${uuidv4().substring(0, 8)}`,
+    userId: targetReceiver,
+    type: 'general',
+    title: `New message from ${user.name}`,
+    message: text.length > 70 ? `${text.substring(0, 70)}...` : text,
+    dateGroup: 'Today',
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
 
   res.status(201).json({
     success: true,

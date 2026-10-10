@@ -20,7 +20,6 @@ import {
   PlusCircle,
   Pause,
   Play,
-  Eye,
   ArrowUpRight,
   ShieldCheck,
   ChevronRight,
@@ -49,13 +48,15 @@ import {
   Settings,
 } from 'lucide-react';
 import { OccupancyRing } from '../components/OccupancyRing';
-import { ParkingSpace } from '../types';
+import { ParkingSpace, Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { api } from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 export const OwnerDashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const { notifications, markAsRead } = useNotifications();
   const navigate = useNavigate();
 
@@ -66,6 +67,7 @@ export const OwnerDashboardPage: React.FC = () => {
       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80';
 
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
   const [metrics, setMetrics] = useState<any>({
     todayEarnings: 0,
     totalEarnings: 0,
@@ -100,23 +102,73 @@ export const OwnerDashboardPage: React.FC = () => {
         setMetrics(mRes.data.metrics);
         setEarningsChart(mRes.data.earningsChart);
         setOccupancyChart(mRes.data.occupancyChart);
+        if (mRes.data.recentBookings) {
+          setRecentBookings(mRes.data.recentBookings);
+        }
       }
       const sRes = await api.getOwnerSpaces();
       const localCustom: ParkingSpace[] = JSON.parse(
         localStorage.getItem('parkshare_custom_spaces') || '[]'
       );
       if (sRes.success) {
-        const merged = [...localCustom, ...sRes.data.filter((s) => !localCustom.some((c) => c.id === s.id))];
+        const serverIds = new Set(sRes.data.map((s) => s.id));
+        const customOnly = localCustom.filter((c) => !serverIds.has(c.id));
+        const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+        const reconciledCustom = customOnly.map((space) => {
+          const activeBookings = localBookings.filter(
+            (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
+          );
+          const occupied = activeBookings.length;
+          const total = space.totalSpots || 1;
+          const avail = Math.max(0, total - occupied);
+          return {
+            ...space,
+            availableSpots: avail,
+            occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
+            status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
+          };
+        });
+        const merged = [...sRes.data, ...reconciledCustom];
         setSpaces(merged);
       } else if (localCustom.length > 0) {
-        setSpaces(localCustom);
+        const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+        const reconciled = localCustom.map((space) => {
+          const activeBookings = localBookings.filter(
+            (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
+          );
+          const occupied = activeBookings.length;
+          const total = space.totalSpots || 1;
+          const avail = Math.max(0, total - occupied);
+          return {
+            ...space,
+            availableSpots: avail,
+            occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
+            status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
+          };
+        });
+        setSpaces(reconciled);
       }
     } catch {
       const localCustom: ParkingSpace[] = JSON.parse(
         localStorage.getItem('parkshare_custom_spaces') || '[]'
       );
-      if (localCustom.length > 0) {
-        setSpaces(localCustom);
+      const localBookings: Booking[] = JSON.parse(localStorage.getItem('parkshare_custom_bookings') || '[]');
+      const reconciled = localCustom.map((space) => {
+        const activeBookings = localBookings.filter(
+          (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
+        );
+        const occupied = activeBookings.length;
+        const total = space.totalSpots || 1;
+        const avail = Math.max(0, total - occupied);
+        return {
+          ...space,
+          availableSpots: avail,
+          occupancyPercent: Math.min(100, Math.round((occupied / total) * 100)),
+          status: avail > 0 && space.status === 'allotted' ? ('active' as const) : space.status,
+        };
+      });
+      if (reconciled.length > 0) {
+        setSpaces(reconciled);
       }
     } finally {
       setIsLoading(false);
@@ -125,6 +177,13 @@ export const OwnerDashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchOwnerData();
+    const handleSync = () => fetchOwnerData();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    window.addEventListener('parkshare_booking_cancelled', handleSync);
+    return () => {
+      window.removeEventListener('parkshare_booking_created', handleSync);
+      window.removeEventListener('parkshare_booking_cancelled', handleSync);
+    };
   }, []);
 
   const handleToggleStatus = async (spaceId: string) => {
@@ -503,96 +562,6 @@ export const OwnerDashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Charts Row: Weekly Revenue Area Chart & Hourly Profile Bar Chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Earnings Chart (7 cols) */}
-              <div className="lg:col-span-7 p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl space-y-4 shadow-xl">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
-                      <span>Weekly Revenue Velocity</span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">Daily earnings across all registered parking bays</p>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 shadow-sm">
-                    ₹11,170 This Week
-                  </span>
-                </div>
-
-                <div className="h-60 w-full pt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={earningsChart}>
-                      <defs>
-                        <linearGradient id="ownerRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} />
-                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#090e1a',
-                          borderColor: '#1e293b',
-                          borderRadius: '16px',
-                          fontSize: '12px',
-                          color: '#f8fafc',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.6)',
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#10b981"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#ownerRevenueGrad)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Occupancy Heatmap by Hour (5 cols) */}
-              <div className="lg:col-span-5 p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl space-y-4 shadow-xl flex flex-col justify-between">
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
-                    <span>Hourly Occupancy Profile</span>
-                    <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Spot utilization patterns by time of day</p>
-                </div>
-
-                <div className="h-56 w-full pt-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={occupancyChart}>
-                      <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
-                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#090e1a',
-                          borderColor: '#1e293b',
-                          borderRadius: '16px',
-                          fontSize: '12px',
-                          color: '#f8fafc',
-                          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.6)',
-                        }}
-                      />
-                      <Bar dataKey="occupancy" fill="#06b6d4" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/80">
-                  <span>Peak window: 12 PM - 4 PM</span>
-                  <span className="text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-                    92% peak fill
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Parking Spaces Management List */}
             <div className="space-y-4">
               {/* Header with Search and Status Filter Tabs */}
@@ -675,14 +644,14 @@ export const OwnerDashboardPage: React.FC = () => {
                     >
                       <div className="flex items-start gap-4 sm:gap-5 min-w-0">
                         {/* Thumbnail Image */}
-                        <div className="relative shrink-0">
+                        <Link to={`/parking/${space.id}`} className="relative shrink-0 block group/thumb">
                           <img
                             src={
                               space.images?.[0] ||
                               'https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80'
                             }
                             alt={space.title || 'Parking spot'}
-                            className="w-20 sm:w-24 h-20 sm:h-24 rounded-2xl object-cover ring-1 ring-slate-700/80 shadow-md group-hover:scale-105 transition-transform"
+                            className="w-20 sm:w-24 h-20 sm:h-24 rounded-2xl object-cover ring-1 ring-slate-700/80 shadow-md group-hover/thumb:scale-105 transition-transform"
                           />
                           <span
                             className={`absolute top-1.5 left-1.5 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md ${
@@ -693,14 +662,16 @@ export const OwnerDashboardPage: React.FC = () => {
                           >
                             {isLive ? 'Live' : 'Paused'}
                           </span>
-                        </div>
+                        </Link>
 
                         {/* Space Details */}
                         <div className="space-y-1.5 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-base sm:text-lg font-extrabold text-white truncate">
-                              {space.title}
-                            </h4>
+                            <Link to={`/parking/${space.id}`} className="hover:text-emerald-400 transition-colors">
+                              <h4 className="text-base sm:text-lg font-extrabold text-white truncate">
+                                {space.title}
+                              </h4>
+                            </Link>
 
                             {space.isVerified && (
                               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
@@ -746,17 +717,8 @@ export const OwnerDashboardPage: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action Buttons: 2x2 grid on mobile, flex row on sm+ */}
-                      <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-800/80">
-                        {/* Live Preview Button */}
-                        <Link
-                          to={`/parking/${space.id}`}
-                          className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700/80 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                        >
-                          <Eye className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Preview</span>
-                        </Link>
-
+                      {/* Action Buttons: 3 cols on mobile, flex row on sm+ */}
+                      <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-800/80">
                         {/* Calendar Button */}
                         <Link
                           to="/owner/calendar"
@@ -825,37 +787,209 @@ export const OwnerDashboardPage: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Live Inbound Driver Reservations Section */}
+            {recentBookings.length > 0 && (
+              <div className="space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+                      <span>Live Driver Reservations</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
+                        {recentBookings.length} Active
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400">Drivers currently booked or confirmed for your parking spaces</p>
+                  </div>
+                  <Link
+                    to="/owner/earnings"
+                    className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                  >
+                    <span>View Financial Settlements</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {recentBookings.map((b) => (
+                    <div
+                      key={b.id}
+                      className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-900/80 border border-emerald-500/30 hover:border-emerald-500/50 backdrop-blur-xl shadow-lg space-y-3 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] uppercase border border-emerald-500/30">
+                              {b.spotNumber || 'Bay Assigned'}
+                            </span>
+                            <span className="text-xs font-mono text-slate-400">#{b.bookingCode}</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white truncate mt-1">{b.parkingTitle}</h4>
+                          <p className="text-xs text-slate-400 flex items-center gap-1">
+                            <Car className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{b.userName || 'Driver'} • Plate: <strong className="font-mono text-slate-200">{b.vehicle?.numberPlate || 'WB 01 AB 1234'}</strong></span>
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-sm sm:text-base font-black text-emerald-400 block">+₹{b.subtotal || b.totalAmount || 0}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-semibold">Earned</span>
+                        </div>
+                      </div>
+
+                      <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between text-xs text-slate-300">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{b.date} • {b.arrivalTime} - {b.departureTime}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-bold text-[11px]">
+                          Confirmed
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Charts Row: Weekly Revenue Area Chart & Hourly Profile Bar Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Earnings Chart (7 cols) */}
+              <div className="lg:col-span-7 p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl space-y-4 shadow-xl">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                      <span>Weekly Revenue Velocity</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Daily earnings across all registered parking bays</p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 shadow-sm">
+                    ₹11,170 This Week
+                  </span>
+                </div>
+
+                <div className="h-60 w-full pt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={earningsChart}>
+                      <defs>
+                        <linearGradient id="ownerRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#090e1a' : '#ffffff',
+                          borderColor: isDark ? '#1e293b' : '#e2e8f0',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          color: isDark ? '#f8fafc' : '#0f172a',
+                          boxShadow: isDark ? '0 10px 25px -5px rgba(0, 0, 0, 0.6)' : '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#ownerRevenueGrad)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Occupancy Heatmap by Hour (5 cols) */}
+              <div className="lg:col-span-5 p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800/80 backdrop-blur-xl space-y-4 shadow-xl flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                    <span>Hourly Occupancy Profile</span>
+                    <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Spot utilization patterns by time of day</p>
+                </div>
+
+                <div className="h-56 w-full pt-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={occupancyChart}>
+                      <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
+                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#090e1a' : '#ffffff',
+                          borderColor: isDark ? '#1e293b' : '#e2e8f0',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          color: isDark ? '#f8fafc' : '#0f172a',
+                          boxShadow: isDark ? '0 10px 25px -5px rgba(0, 0, 0, 0.6)' : '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                        }}
+                      />
+                      <Bar dataKey="occupancy" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-800/80">
+                  <span>Peak window: 12 PM - 4 PM</span>
+                  <span className="text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                    92% peak fill
+                  </span>
+                </div>
+              </div>
+            </div>
           </main>
         </div>
       </div>
 
       {/* Delete Confirmation Modal */}
       {spaceToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#090e1a] border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-5 animate-in zoom-in-95 duration-200 shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setSpaceToDelete(null)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={`border rounded-3xl p-6 max-w-md w-full space-y-5 animate-in zoom-in-95 duration-200 shadow-2xl ${
+              isDark
+                ? 'bg-[#0d131f] border-slate-800 text-slate-100'
+                : 'bg-white border-slate-200 text-slate-900 shadow-xl'
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-rose-400">
-                <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-rose-400" />
+              <div className="flex items-center gap-2.5 text-rose-500">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-rose-500" />
                 </div>
-                <h3 className="text-base font-bold text-white">Delete Parking Listing</h3>
+                <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Delete Parking Listing</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSpaceToDelete(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  isDark
+                    ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-2 text-xs text-slate-300">
-              <p>
+            <div className="space-y-3 text-xs">
+              <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
                 Are you sure you want to permanently delete this parking listing? This action cannot be undone.
               </p>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <span className="font-bold text-white block text-sm">{spaceToDelete.title}</span>
-                <span className="text-slate-400">{spaceToDelete.address}</span>
+              <div className={`p-3.5 rounded-2xl border ${
+                isDark
+                  ? 'bg-slate-950/70 border-slate-800/80'
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`font-bold block text-sm mb-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>{spaceToDelete.title}</span>
+                <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{spaceToDelete.address}</span>
               </div>
             </div>
 
@@ -864,7 +998,11 @@ export const OwnerDashboardPage: React.FC = () => {
                 type="button"
                 onClick={() => setSpaceToDelete(null)}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                }`}
               >
                 Cancel
               </button>
@@ -872,7 +1010,7 @@ export const OwnerDashboardPage: React.FC = () => {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-600/30 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-600/30 cursor-pointer transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>{isDeleting ? 'Deleting...' : 'Yes, Delete Parking'}</span>

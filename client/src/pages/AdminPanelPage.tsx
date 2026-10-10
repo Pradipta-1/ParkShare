@@ -43,7 +43,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { api } from '../services/api';
-import { VerificationRequestItem, ReportItem, User } from '../types';
+import { VerificationRequestItem, ReportItem, User, Booking } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
@@ -101,6 +101,7 @@ export const AdminPanelPage: React.FC = () => {
   );
 
   const [metricsData, setMetricsData] = useState<any>(null);
+  const [platformBookings, setPlatformBookings] = useState<Booking[]>([]);
 
   // Verification requests state with localStorage fallback
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequestItem[]>(() => {
@@ -184,15 +185,19 @@ export const AdminPanelPage: React.FC = () => {
   const fetchAdminData = async () => {
     setIsRefreshing(true);
     try {
-      const [mRes, vRes, rRes, uRes] = await Promise.allSettled([
+      const [mRes, vRes, rRes, uRes, bRes] = await Promise.allSettled([
         api.getAdminMetrics(),
         api.getVerificationRequests(),
         api.getReports(),
         api.getAdminUsers(),
+        api.getBookings(),
       ]);
 
       if (mRes.status === 'fulfilled' && mRes.value.success) {
         setMetricsData(mRes.value.data);
+      }
+      if (bRes.status === 'fulfilled' && bRes.value.success && bRes.value.data) {
+        setPlatformBookings(bRes.value.data);
       }
       if (vRes.status === 'fulfilled' && vRes.value.success && vRes.value.data?.length) {
         setVerificationRequests(vRes.value.data);
@@ -223,6 +228,9 @@ export const AdminPanelPage: React.FC = () => {
 
   useEffect(() => {
     fetchAdminData();
+    const handleSync = () => fetchAdminData();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    return () => window.removeEventListener('parkshare_booking_created', handleSync);
   }, []);
 
   // Save usersList changes to localStorage
@@ -687,7 +695,7 @@ export const AdminPanelPage: React.FC = () => {
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Active Users</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white">
-                {metricsData?.metrics?.usersCount?.toLocaleString() || '24,820'}
+                {usersList.length}
               </div>
               <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold block">Drivers & Hosts</span>
             </div>
@@ -695,7 +703,7 @@ export const AdminPanelPage: React.FC = () => {
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Parking Spaces</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white">
-                {metricsData?.metrics?.parkingSpacesCount?.toLocaleString() || '6,431'}
+                {metricsData?.metrics?.parkingSpacesCount ?? 0}
               </div>
               <span className="text-[10px] sm:text-[11px] text-blue-400 font-semibold block">In 12 Metro Zones</span>
             </div>
@@ -703,7 +711,7 @@ export const AdminPanelPage: React.FC = () => {
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Total Bookings</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-white">
-                {metricsData?.metrics?.bookingsCount?.toLocaleString() || '18,294'}
+                {metricsData?.metrics?.bookingsCount ?? platformBookings.length}
               </div>
               <span className="text-[10px] sm:text-[11px] text-purple-400 font-semibold block">Completed sessions</span>
             </div>
@@ -711,7 +719,7 @@ export const AdminPanelPage: React.FC = () => {
             <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1 shadow-sm">
               <span className="text-[10px] sm:text-xs font-bold uppercase text-slate-400 tracking-wider">Gross Platform GMV</span>
               <div className="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-400">
-                {metricsData?.metrics?.revenueTotal || '₹18.4L'}
+                {metricsData?.metrics?.revenueTotal || '₹0'}
               </div>
               <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold block">+24% MoM</span>
             </div>
@@ -859,6 +867,64 @@ export const AdminPanelPage: React.FC = () => {
                 <span className="text-emerald-400 font-semibold">86% avg</span>
               </div>
             </div>
+          </div>
+
+          {/* Live Platform Bookings Roster */}
+          <div className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span>Real-Time Platform Bookings</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 text-xs font-bold">
+                    {platformBookings.length} Recorded
+                  </span>
+                </h3>
+                <p className="text-[11px] sm:text-xs text-slate-400">Live booking stream across all drivers and host garages</p>
+              </div>
+            </div>
+
+            {platformBookings.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-xs text-slate-400">
+                No platform bookings recorded yet. New driver reservations will appear here in real time.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-bold">
+                    <tr>
+                      <th className="pb-3">Booking ID</th>
+                      <th className="pb-3">Driver / User</th>
+                      <th className="pb-3">Parking Spot & Bay</th>
+                      <th className="pb-3">Vehicle Plate</th>
+                      <th className="pb-3">Date & Time</th>
+                      <th className="pb-3">Amount</th>
+                      <th className="pb-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60">
+                    {platformBookings.map((bk) => (
+                      <tr key={bk.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="py-3 font-mono font-bold text-emerald-400">{bk.bookingCode}</td>
+                        <td className="py-3 font-medium text-white">{bk.userName || 'Driver'}</td>
+                        <td className="py-3">
+                          <span className="font-semibold text-slate-200 block truncate max-w-[200px]">{bk.parkingTitle}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{bk.spotNumber || 'Bay Assigned'}</span>
+                        </td>
+                        <td className="py-3 font-mono text-slate-300">{bk.vehicle?.numberPlate || 'WB 01 AB 1234'}</td>
+                        <td className="py-3 text-slate-400">{bk.date} • {bk.arrivalTime}</td>
+                        <td className="py-3 font-black text-emerald-400 font-mono">₹{bk.totalAmount || 0}</td>
+                        <td className="py-3">
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-bold text-[10px] uppercase">
+                            {bk.bookingStatus || 'Confirmed'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

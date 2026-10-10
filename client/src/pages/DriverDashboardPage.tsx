@@ -79,7 +79,7 @@ export const DriverDashboardPage: React.FC = () => {
         const bRes = await api.getBookings();
         if (bRes.success) {
           setBookings(bRes.data);
-          const active = bRes.data.find((b) => b.bookingStatus === 'active') || null;
+          const active = bRes.data.find((b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed') || null;
           setActiveBooking(active);
         }
         const vRes = await api.getVehicles();
@@ -91,6 +91,16 @@ export const DriverDashboardPage: React.FC = () => {
       }
     };
     loadDashboardData();
+
+    const handleBookingSync = () => {
+      loadDashboardData();
+    };
+    window.addEventListener('parkshare_booking_created', handleBookingSync);
+    window.addEventListener('parkshare_booking_cancelled', handleBookingSync);
+    return () => {
+      window.removeEventListener('parkshare_booking_created', handleBookingSync);
+      window.removeEventListener('parkshare_booking_cancelled', handleBookingSync);
+    };
   }, []);
 
   const showToast = (msg: string) => {
@@ -505,7 +515,7 @@ export const DriverDashboardPage: React.FC = () => {
                   Wallet Balance
                 </span>
                 <div className="text-lg sm:text-2xl font-black text-emerald-400 mt-1">
-                  ₹{user?.walletBalance ?? 450}
+                  ₹{user?.walletBalance ?? 0}
                 </div>
                 <button
                   type="button"
@@ -728,6 +738,9 @@ export const DriverDashboardPage: React.FC = () => {
                             setBookings((prev) =>
                               prev.map((b) => (b.id === currentDisplayBooking.id ? { ...b, bookingStatus: 'cancelled' } : b))
                             );
+                            if (user && currentDisplayBooking.totalAmount) {
+                              updateUser({ walletBalance: (user.walletBalance || 0) + currentDisplayBooking.totalAmount });
+                            }
                             showToast('Booking cancelled. Parking allotment released and amount refunded to wallet.');
                           }}
                           className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
@@ -945,7 +958,7 @@ export const DriverDashboardPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>Top-up ParkShare Wallet</h3>
-                  <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Current Balance: ₹{user?.walletBalance ?? 450}</span>
+                  <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Current Balance: ₹{user?.walletBalance ?? 0}</span>
                 </div>
               </div>
               <button

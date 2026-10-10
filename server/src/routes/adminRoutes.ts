@@ -26,8 +26,15 @@ router.delete('/users/:id', optionalAuthenticate, deleteAdminUser);
 router.get('/parking', optionalAuthenticate, getAdminParking);
 router.get('/bookings', optionalAuthenticate, getAdminBookings);
 router.get('/verification', optionalAuthenticate, getVerificationRequests);
+router.get('/verifications', optionalAuthenticate, getVerificationRequests);
 router.post('/verification/:id/approve', optionalAuthenticate, approveVerification);
+router.put('/verification/:id/approve', optionalAuthenticate, approveVerification);
+router.post('/verifications/:id/approve', optionalAuthenticate, approveVerification);
+router.put('/verifications/:id/approve', optionalAuthenticate, approveVerification);
 router.post('/verification/:id/reject', optionalAuthenticate, rejectVerification);
+router.put('/verification/:id/reject', optionalAuthenticate, rejectVerification);
+router.post('/verifications/:id/reject', optionalAuthenticate, rejectVerification);
+router.put('/verifications/:id/reject', optionalAuthenticate, rejectVerification);
 router.get('/reports', optionalAuthenticate, getReports);
 router.put('/reports/:id/status', optionalAuthenticate, updateReportStatus);
 

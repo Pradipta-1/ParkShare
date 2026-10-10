@@ -70,7 +70,7 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
   // Update parking average rating
   const parking = dbStore.parkingSpaces.find((p) => p.id === parkingId);
   if (parking) {
-    parking.reviewCount += 1;
+    parking.reviewCount = (parking.reviewCount || 0) + 1;
     const all = dbStore.reviews.filter((r) => r.parkingId === parkingId);
     const sum = all.reduce((acc, curr) => acc + curr.rating, 0);
     parking.rating = Number((sum / all.length).toFixed(1));

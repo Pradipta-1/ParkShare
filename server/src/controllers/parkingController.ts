@@ -21,21 +21,17 @@ export const getParkingList = (req: Request, res: Response): void => {
 
   // Reconcile space allotments with live booking states
   for (const space of dbStore.parkingSpaces) {
-    const hasActiveBooking = dbStore.bookings.some(
+    const activeBookings = dbStore.bookings.filter(
       (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
     );
-    const hasCancelledBooking = dbStore.bookings.some(
-      (b) => b.parkingId === space.id && b.bookingStatus === 'cancelled'
-    );
-    // If user cancelled their booking for this space and there are no other active bookings:
-    if (hasCancelledBooking && !hasActiveBooking) {
-      if (space.status === 'allotted') {
-        space.status = 'active';
-      }
-      if ((space.availableSpots ?? 0) <= 0) {
-        space.availableSpots = space.totalSpots || 1;
-      }
-      space.occupancyPercent = 0;
+    const occupied = activeBookings.length;
+    const total = space.totalSpots || 1;
+    space.availableSpots = Math.max(0, total - occupied);
+    space.occupancyPercent = Math.min(100, Math.round((occupied / total) * 100));
+    if (space.availableSpots > 0 && space.status === 'allotted') {
+      space.status = 'active';
+    } else if (space.availableSpots === 0 && space.status === 'active') {
+      space.status = 'allotted';
     }
   }
 

@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Send, MapPin, Calendar, Clock, Car, ShieldCheck, User, ArrowLeft } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Send, MapPin, Calendar, Clock, Car, ShieldCheck, User, ArrowLeft, MessageSquare } from 'lucide-react';
 import { api } from '../services/api';
 import { MessageItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 export const MessagingPage: React.FC = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlBookingId = searchParams.get('bookingId');
+
+  const [currentBookingId, setCurrentBookingId] = useState<string>(urlBookingId || 'latest');
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [bookingContext, setBookingContext] = useState<any>(null);
   const [inputText, setInputText] = useState<string>('');
@@ -15,10 +19,32 @@ export const MessagingPage: React.FC = () => {
 
   const fetchMessages = async () => {
     try {
-      const res = await api.getMessages('book_active_1');
+      const bRes = await api.getBookings();
+      const activeOrFirst =
+        bRes.data?.find((b) => b.bookingStatus === 'active' || b.bookingStatus === 'confirmed') ||
+        bRes.data?.[0];
+      const targetId = urlBookingId || activeOrFirst?.id || 'latest';
+      setCurrentBookingId(targetId);
+
+      const res = await api.getMessages(targetId);
       if (res.success) {
         setMessages(res.data);
-        if (res.bookingContext) setBookingContext(res.bookingContext);
+        if (res.bookingContext) {
+          setBookingContext(res.bookingContext);
+        } else if (activeOrFirst) {
+          setBookingContext({
+            bookingId: activeOrFirst.id,
+            bookingCode: activeOrFirst.bookingCode,
+            parkingTitle: activeOrFirst.parkingTitle,
+            date: activeOrFirst.date,
+            arrivalTime: activeOrFirst.arrivalTime,
+            departureTime: activeOrFirst.departureTime,
+            spotNumber: activeOrFirst.spotNumber,
+            driverName: activeOrFirst.userName,
+            ownerId: activeOrFirst.ownerId,
+            ownerName: (activeOrFirst as any).ownerName || 'Vikramaditya Roy',
+          });
+        }
       }
     } catch {
       // Fallback
@@ -29,7 +55,7 @@ export const MessagingPage: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchMessages();
-  }, []);
+  }, [urlBookingId]);
 
   // Scroll only the internal chat container to the bottom without scrolling the whole webpage
   useEffect(() => {
@@ -42,13 +68,17 @@ export const MessagingPage: React.FC = () => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
+    const targetReceiver =
+      bookingContext?.ownerId ||
+      (user?.role === 'driver' ? 'usr_owner_1' : 'usr_driver_1');
+
     const optimistic: MessageItem = {
       id: `temp_${Date.now()}`,
-      bookingId: 'book_active_1',
+      bookingId: currentBookingId,
       senderId: user?.id || 'usr_driver_1',
       senderName: user?.name || 'Rahul Sen',
       senderRole: user?.role || 'driver',
-      receiverId: 'usr_owner_1',
+      receiverId: targetReceiver,
       text: inputText,
       timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     };
@@ -59,7 +89,7 @@ export const MessagingPage: React.FC = () => {
 
     try {
       setIsSending(true);
-      await api.sendMessage('book_active_1', textToSend);
+      await api.sendMessage(currentBookingId, textToSend, targetReceiver);
     } catch {
       // Keep optimistic message
     } finally {
@@ -106,35 +136,47 @@ export const MessagingPage: React.FC = () => {
 
           <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 bg-slate-900/60 sm:bg-transparent px-2.5 py-1 sm:p-0 rounded-lg border border-slate-800/80 sm:border-0">
             <span className="text-[11px] sm:text-xs text-slate-400">Host:</span>
-            <span className="text-xs font-bold text-white">Vikramaditya Roy</span>
+            <span className="text-xs font-bold text-white">{bookingContext?.ownerName || 'Vikramaditya Roy'}</span>
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           </div>
         </div>
 
         {/* Message Thread */}
         <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3 sm:space-y-4">
-          {messages.map((msg) => {
-            const isMe = msg.senderId === user?.id || msg.senderRole === user?.role;
-            return (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-              >
-                <span className="text-[10px] text-slate-500 mb-1 px-1">
-                  {isMe ? 'You' : msg.senderName} • {msg.timestamp}
-                </span>
-                <div
-                  className={`max-w-[85%] sm:max-w-md px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                    isMe
-                      ? 'bg-emerald-500 text-slate-950 font-medium rounded-tr-none shadow-md shadow-emerald-500/10'
-                      : 'bg-slate-900 border border-slate-800 text-white rounded-tl-none'
-                  }`}
-                >
-                  {msg.text}
-                </div>
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 mx-auto">
+                <MessageSquare className="w-6 h-6" />
               </div>
-            );
-          })}
+              <h4 className="text-sm font-bold text-white">Direct Host Messaging</h4>
+              <p className="text-xs text-slate-400 max-w-sm">
+                Ask your parking host about entrance clearances, gate access codes, or directions.
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.senderId === user?.id || msg.senderRole === user?.role;
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                >
+                  <span className="text-[10px] text-slate-500 mb-1 px-1">
+                    {isMe ? 'You' : msg.senderName} • {msg.timestamp}
+                  </span>
+                  <div
+                    className={`max-w-[85%] sm:max-w-md px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                      isMe
+                        ? 'bg-emerald-500 text-slate-950 font-medium rounded-tr-none shadow-md shadow-emerald-500/10'
+                        : 'bg-slate-900 border border-slate-800 text-white rounded-tl-none'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Input Form */}

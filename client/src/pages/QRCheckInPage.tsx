@@ -36,7 +36,7 @@ export const QRCheckInPage: React.FC = () => {
       try {
         const res = await api.getBookings();
         if (res.success && res.data.length > 0) {
-          const b = res.data.find((item) => item.bookingStatus === 'active') || res.data[0];
+          const b = res.data.find((item) => item.bookingStatus === 'active' || item.bookingStatus === 'confirmed') || res.data[0];
           setActiveBooking(b);
           if (b.bookingStatus === 'active' && b.checkInTime) {
             setCheckInState('checked_in');
@@ -52,6 +52,9 @@ export const QRCheckInPage: React.FC = () => {
       }
     };
     loadBooking();
+    const handleSync = () => loadBooking();
+    window.addEventListener('parkshare_booking_created', handleSync);
+    return () => window.removeEventListener('parkshare_booking_created', handleSync);
   }, []);
 
   const handleSimulateScanCheckIn = async () => {
