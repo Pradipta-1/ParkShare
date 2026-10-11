@@ -27,6 +27,7 @@ import {
   EyeOff,
   Check,
   Lock,
+  RotateCcw,
 } from 'lucide-react';
 import { LeafletMap } from '../components/LeafletMap';
 import { ParkingCard } from '../components/ParkingCard';
@@ -53,6 +54,22 @@ const VEHICLE_OPTIONS: { label: string; value: VehicleType | 'All' }[] = [
   { label: 'SUV', value: 'SUV' },
   { label: 'EV Charging', value: 'EV' },
   { label: 'Bike', value: 'Bike' },
+];
+
+const SORT_OPTIONS: { label: string; value: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'available' }[] = [
+  { label: 'Recommended', value: 'relevance' },
+  { label: 'Price: Low to High', value: 'price_asc' },
+  { label: 'Price: High to Low', value: 'price_desc' },
+  { label: 'Highest Rated', value: 'rating' },
+  { label: 'Most Available', value: 'available' },
+];
+
+const DISTANCE_OPTIONS: { label: string; value?: number }[] = [
+  { label: 'Any Distance', value: undefined },
+  { label: 'Within 500m', value: 500 },
+  { label: 'Within 1km', value: 1000 },
+  { label: 'Within 3km', value: 3000 },
+  { label: 'Within 5km', value: 5000 },
 ];
 
 export const FindParkingPage: React.FC = () => {
@@ -88,14 +105,6 @@ export const FindParkingPage: React.FC = () => {
     touchStartYRef.current = null;
   };
 
-  const toggleMobileSheet = () => {
-    setMobileSheetState((curr) => {
-      if (curr === 'peek') return 'half';
-      if (curr === 'half') return 'full';
-      return 'peek';
-    });
-  };
-
   const [sortBy, setSortBy] = useState<'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'available'>('relevance');
 
   const [bookingSpace, setBookingSpace] = useState<ParkingSpace | null>(null);
@@ -115,6 +124,46 @@ export const FindParkingPage: React.FC = () => {
     q: initialQuery || undefined,
     category: initialCategory,
   });
+
+  // Mobile dedicated sorting & filtering modal state
+  const [isMobileSortOpen, setIsMobileSortOpen] = useState<boolean>(false);
+  const [tempSortBy, setTempSortBy] = useState<'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'available'>(sortBy);
+  const [tempCategory, setTempCategory] = useState<string>('All');
+  const [tempVehicle, setTempVehicle] = useState<VehicleType | 'All'>('All');
+  const [tempDistance, setTempDistance] = useState<number | undefined>(undefined);
+
+  const handleOpenMobileSort = () => {
+    setTempSortBy(sortBy);
+    setTempCategory(filters.category || 'All');
+    setTempVehicle((filters.vehicle as VehicleType) || 'All');
+    setTempDistance(filters.distance);
+    setIsMobileSortOpen(true);
+  };
+
+  const handleApplyMobileSort = () => {
+    setSortBy(tempSortBy);
+    setFilters((prev) => ({
+      ...prev,
+      category: tempCategory === 'All' ? undefined : (tempCategory as any),
+      vehicle: tempVehicle === 'All' ? undefined : (tempVehicle as any),
+      distance: tempDistance,
+    }));
+    setIsMobileSortOpen(false);
+  };
+
+  const handleResetMobileSort = () => {
+    setTempSortBy('relevance');
+    setTempCategory('All');
+    setTempVehicle('All');
+    setTempDistance(undefined);
+  };
+
+  const isSortActive = Boolean(
+    sortBy !== 'relevance' ||
+    (filters.category && filters.category !== 'All') ||
+    (filters.vehicle && filters.vehicle !== 'All') ||
+    filters.distance
+  );
 
   // Calculate live counts of allotted vs available vs total
   const counts = useMemo(() => {
@@ -385,106 +434,151 @@ export const FindParkingPage: React.FC = () => {
 
         {/* Tier 2: Category Chips & Quick Dropdowns Strip */}
         <div className={`border-t py-2 transition-colors ${isDark ? 'border-slate-800/60 bg-[#090d16]/90' : 'border-slate-200 bg-slate-50/95'}`}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-            {/* Category Chips */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {QUICK_CATEGORIES.map((cat) => {
-                const isSelected =
-                  (!filters.category && cat === 'All') ||
-                  filters.category?.toLowerCase() === cat.toLowerCase();
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        category: cat === 'All' ? undefined : (cat as any),
-                      }))
-                    }
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                      isSelected
-                        ? isDark
-                          ? 'bg-emerald-500 text-slate-950 font-black shadow-sm shadow-emerald-500/25'
-                          : 'bg-emerald-500 text-slate-950 font-black shadow-sm shadow-emerald-500/25'
-                        : isDark
-                        ? 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/80'
-                        : 'bg-white text-slate-800 hover:text-slate-950 hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 shadow-xs'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* MOBILE ONLY: Exactly two options - "All" (selected by default) and "Sort" */}
+            <div className="flex sm:hidden items-center gap-2 w-full">
+              <button
+                type="button"
+                onClick={() =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    category: undefined,
+                  }))
+                }
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  !filters.category || filters.category === 'All'
+                    ? 'bg-emerald-500 text-slate-950 font-black shadow-sm shadow-emerald-500/25'
+                    : isDark
+                    ? 'bg-slate-900/90 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    : 'bg-white text-slate-800 hover:text-slate-950 border border-slate-200 shadow-xs'
+                }`}
+              >
+                All
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenMobileSort}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isSortActive
+                    ? isDark
+                      ? 'bg-slate-800 text-emerald-400 border border-emerald-500/40 shadow-sm'
+                      : 'bg-emerald-50 text-emerald-800 border-2 border-emerald-500/50 shadow-xs'
+                    : isDark
+                    ? 'bg-slate-900/90 text-slate-300 hover:text-white border border-slate-800'
+                    : 'bg-white text-slate-800 hover:text-slate-950 border border-slate-200 shadow-xs'
+                }`}
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Sort</span>
+                {isSortActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                )}
+              </button>
             </div>
 
-            {/* Quick Vehicle & Distance & Sort Selectors */}
-            <div className="flex items-center gap-2 shrink-0 ml-auto">
-              {/* Vehicle selector */}
-              <select
-                value={filters.vehicle || 'All'}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    vehicle: e.target.value === 'All' ? undefined : (e.target.value as any),
-                  }))
-                }
-                aria-label="Filter by vehicle type"
-                className={`px-2.5 py-1 rounded-xl text-xs font-semibold outline-none cursor-pointer transition-colors border ${
-                  isDark
-                    ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                    : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-xs'
-                }`}
-              >
-                {VEHICLE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+            {/* DESKTOP ONLY: Full Category Chips & Quick Dropdowns Strip */}
+            <div className="hidden sm:flex items-center justify-between gap-3 overflow-x-auto scrollbar-none w-full">
+              {/* Category Chips */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {QUICK_CATEGORIES.map((cat) => {
+                  const isSelected =
+                    (!filters.category && cat === 'All') ||
+                    filters.category?.toLowerCase() === cat.toLowerCase();
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          category: cat === 'All' ? undefined : (cat as any),
+                        }))
+                      }
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        isSelected
+                          ? isDark
+                            ? 'bg-emerald-500 text-slate-950 font-black shadow-sm shadow-emerald-500/25'
+                            : 'bg-emerald-500 text-slate-950 font-black shadow-sm shadow-emerald-500/25'
+                          : isDark
+                          ? 'bg-slate-900/90 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800/80'
+                          : 'bg-white text-slate-800 hover:text-slate-950 hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-300 shadow-xs'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
 
-              {/* Distance selector */}
-              <select
-                value={filters.distance || ''}
-                onChange={(e) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    distance: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
-                aria-label="Filter by distance"
-                className={`px-2.5 py-1 rounded-xl text-xs font-semibold outline-none cursor-pointer transition-colors border ${
-                  isDark
-                    ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
-                    : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-xs'
-                }`}
-              >
-                <option value="" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Any Distance</option>
-                <option value="500" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 500m</option>
-                <option value="1000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 1km</option>
-                <option value="3000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 3km</option>
-                <option value="5000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 5km</option>
-              </select>
-
-              {/* Sort By selector */}
-              <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-xl border transition-colors ${
-                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
-              }`}>
-                <ArrowUpDown className={`w-3 h-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+              {/* Quick Vehicle & Distance & Sort Selectors */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                {/* Vehicle selector */}
                 <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  aria-label="Sort parking spaces"
-                  className={`bg-transparent text-xs font-semibold outline-none cursor-pointer border-none ${
-                    isDark ? 'text-slate-300' : 'text-slate-800'
+                  value={filters.vehicle || 'All'}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      vehicle: e.target.value === 'All' ? undefined : (e.target.value as any),
+                    }))
+                  }
+                  aria-label="Filter by vehicle type"
+                  className={`px-2.5 py-1 rounded-xl text-xs font-semibold outline-none cursor-pointer transition-colors border ${
+                    isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                      : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-xs'
                   }`}
                 >
-                  <option value="relevance" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Recommended</option>
-                  <option value="price_asc" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Price: Low to High</option>
-                  <option value="price_desc" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Price: High to Low</option>
-                  <option value="rating" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Highest Rated</option>
-                  <option value="available" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Most Available</option>
+                  {VEHICLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value} className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>
+                      {opt.label}
+                    </option>
+                  ))}
                 </select>
+
+                {/* Distance selector */}
+                <select
+                  value={filters.distance || ''}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      distance: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                  aria-label="Filter by distance"
+                  className={`px-2.5 py-1 rounded-xl text-xs font-semibold outline-none cursor-pointer transition-colors border ${
+                    isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                      : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 shadow-xs'
+                  }`}
+                >
+                  <option value="" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Any Distance</option>
+                  <option value="500" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 500m</option>
+                  <option value="1000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 1km</option>
+                  <option value="3000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 3km</option>
+                  <option value="5000" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Within 5km</option>
+                </select>
+
+                {/* Sort By selector */}
+                <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-xl border transition-colors ${
+                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-xs'
+                }`}>
+                  <ArrowUpDown className={`w-3 h-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`} />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    aria-label="Sort parking spaces"
+                    className={`bg-transparent text-xs font-semibold outline-none cursor-pointer border-none ${
+                      isDark ? 'text-slate-300' : 'text-slate-800'
+                    }`}
+                  >
+                    <option value="relevance" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Recommended</option>
+                    <option value="price_asc" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Price: Low to High</option>
+                    <option value="price_desc" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Price: High to Low</option>
+                    <option value="rating" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Highest Rated</option>
+                    <option value="available" className={isDark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'}>Most Available</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -780,16 +874,15 @@ export const FindParkingPage: React.FC = () => {
               : 'h-[88vh]'
           }`}
         >
-          {/* Top Drag Bar & Handle */}
+          {/* Top Drag Bar & Handle (Swipe only for mobile devices) */}
           <div
-            className={`w-full pt-2.5 pb-2 px-4 flex flex-col items-center cursor-pointer select-none shrink-0 border-b ${
+            className={`w-full pt-2.5 pb-2 px-4 flex flex-col items-center select-none shrink-0 border-b ${
               isDark ? 'border-slate-800/60' : 'border-slate-100'
             }`}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
-            onClick={toggleMobileSheet}
           >
-            <div className={`w-12 h-1.5 rounded-full mb-2 hover:bg-emerald-400 transition-colors ${
+            <div className={`w-12 h-1.5 rounded-full mb-2 ${
               isDark ? 'bg-slate-600' : 'bg-slate-300'
             }`} />
 
@@ -825,7 +918,7 @@ export const FindParkingPage: React.FC = () => {
                 )}
               </div>
 
-              <div className={`flex items-center gap-1.5 transition-colors shrink-0 ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}>
+              <div className={`flex items-center gap-1.5 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 <span className="text-[11px] font-semibold">
                   {mobileSheetState === 'peek'
                     ? 'Expand'
@@ -1080,6 +1173,200 @@ export const FindParkingPage: React.FC = () => {
             fetchSpaces();
           }}
         />
+      )}
+
+      {/* Mobile-Only Dedicated Sorting & Filtering Window */}
+      {isMobileSortOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileSortOpen(false)}
+          />
+
+          {/* Sheet Container */}
+          <div
+            className={`relative w-full max-h-[85vh] rounded-t-3xl border-t shadow-2xl flex flex-col z-10 animate-in slide-in-from-bottom duration-300 ${
+              isDark
+                ? 'bg-[#0b101b] border-slate-800 text-white'
+                : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* Header */}
+            <div
+              className={`p-4 border-b flex items-center justify-between sticky top-0 backdrop-blur-md z-20 ${
+                isDark ? 'border-slate-800 bg-[#0b101b]/95' : 'border-slate-200 bg-white/95'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-emerald-500" />
+                <h2 className="text-sm font-extrabold">Sort & Filter Options</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSortOpen(false)}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+                aria-label="Close sort window"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 space-y-5 overflow-y-auto flex-1">
+              {/* 1. Sort By */}
+              <div>
+                <label className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
+                  isDark ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  Sort By
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SORT_OPTIONS.map((opt) => {
+                    const isSelected = tempSortBy === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setTempSortBy(opt.value)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20 font-black'
+                            : isDark
+                            ? 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. All types of places */}
+              <div>
+                <label className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
+                  isDark ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  Types of Places
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_CATEGORIES.map((cat) => {
+                    const isSelected =
+                      (tempCategory === 'All' && cat === 'All') ||
+                      tempCategory.toLowerCase() === cat.toLowerCase();
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setTempCategory(cat)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20 font-black'
+                            : isDark
+                            ? 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. All vehicle */}
+              <div>
+                <label className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
+                  isDark ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  Vehicle
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {VEHICLE_OPTIONS.map((opt) => {
+                    const isSelected = tempVehicle === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setTempVehicle(opt.value)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20 font-black'
+                            : isDark
+                            ? 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Any distance */}
+              <div>
+                <label className={`text-[11px] font-bold uppercase tracking-wider block mb-2 ${
+                  isDark ? 'text-slate-400' : 'text-slate-600'
+                }`}>
+                  Distance
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {DISTANCE_OPTIONS.map((opt) => {
+                    const isSelected = tempDistance === opt.value;
+                    return (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setTempDistance(opt.value)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-500 text-slate-950 shadow-sm shadow-emerald-500/20 font-black'
+                            : isDark
+                            ? 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-100 text-slate-800 border border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              className={`p-4 border-t flex items-center gap-3 sticky bottom-0 backdrop-blur-md ${
+                isDark ? 'border-slate-800 bg-[#0b101b]/95' : 'border-slate-200 bg-white/95'
+              }`}
+            >
+              <button
+                type="button"
+                onClick={handleResetMobileSort}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer ${
+                  isDark
+                    ? 'border-slate-800 text-slate-300 hover:bg-slate-800'
+                    : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyMobileSort}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shadow-md shadow-emerald-500/25 text-center cursor-pointer"
+              >
+                Apply Sort & Filters
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

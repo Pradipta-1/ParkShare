@@ -174,7 +174,9 @@ export const VehicleGaragePage: React.FC = () => {
             setFormError('');
             setShowAddModal(true);
           }}
-          className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 w-full sm:w-auto cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+          className={`${
+            vehicles.length === 0 ? 'hidden sm:flex' : 'flex'
+          } px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 w-full sm:w-auto cursor-pointer transition-all hover:scale-[1.02] active:scale-95`}
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>Add Vehicle</span>

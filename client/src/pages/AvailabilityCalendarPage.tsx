@@ -175,128 +175,129 @@ export const AvailabilityCalendarPage: React.FC = () => {
       ) : (
         <>
           {/* Weekly Rate & Occupancy Heatmap Section */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#0f172a] border border-slate-800 space-y-3 sm:space-y-3.5 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-extrabold text-white text-sm sm:text-base">Weekly Rate & Occupancy Heatmap</h3>
+          <div className="p-3.5 sm:p-5 rounded-2xl bg-[#0f172a] border border-slate-800 space-y-2.5 sm:space-y-3.5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-2.5">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+                <h3 className="font-extrabold text-white text-xs sm:text-base">Weekly Rate & Occupancy Heatmap</h3>
               </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Normal
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-sky-400" /> High Demand
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Peak Weekend
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> Blocked
-            </span>
-          </div>
-        </div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-slate-400">
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400" /> Normal
+                </span>
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-400" /> High Demand
+                </span>
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-400" /> Peak Weekend
+                </span>
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-rose-400" /> Blocked
+                </span>
+              </div>
+            </div>
 
-        {/* 7 Days Column Heatmap */}
-        <div className="overflow-x-auto py-2 px-1 no-scrollbar touch-pan-x">
-          <div className="min-w-[560px] sm:min-w-0 grid grid-cols-7 gap-2 sm:gap-3">
-            {calendarDays.map((col) => {
-              const isBlocked = blockedDates.includes(col.date);
-              const isSelected = selectedDate === col.date;
+            {/* 7 Days Column Heatmap: Fits all 7 days seamlessly on mobile */}
+            <div className="py-1 sm:py-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-3 w-full">
+                {calendarDays.map((col) => {
+                  const isBlocked = blockedDates.includes(col.date);
+                  const isSelected = selectedDate === col.date;
 
-              // Heatmap intensity style
-              let baseBgClass = isDark
-                ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
-                : 'bg-white border-slate-200 hover:border-slate-300';
+                  // Heatmap intensity style
+                  let baseBgClass = isDark
+                    ? 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                    : 'bg-white border-slate-200 hover:border-slate-300';
 
-              if (isBlocked) {
-                baseBgClass = isDark
-                  ? 'bg-rose-950/25 border-rose-500/40 text-rose-300'
-                  : 'bg-rose-50 border-rose-300 text-rose-800';
-              } else if (col.occupancy >= 95) {
-                baseBgClass = isDark
-                  ? 'bg-amber-950/25 border-amber-500/40 text-amber-200'
-                  : 'bg-amber-50 border-amber-300 text-amber-900';
-              } else if (col.occupancy >= 80) {
-                baseBgClass = isDark
-                  ? 'bg-blue-950/25 border-blue-500/40 text-blue-200'
-                  : 'bg-blue-50 border-blue-300 text-blue-900';
-              } else {
-                baseBgClass = isDark
-                  ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
-                  : 'bg-emerald-50 border-emerald-300 text-emerald-900';
-              }
+                  if (isBlocked) {
+                    baseBgClass = isDark
+                      ? 'bg-rose-950/25 border-rose-500/40 text-rose-300'
+                      : 'bg-rose-50 border-rose-300 text-rose-800';
+                  } else if (col.occupancy >= 95) {
+                    baseBgClass = isDark
+                      ? 'bg-amber-950/25 border-amber-500/40 text-amber-200'
+                      : 'bg-amber-50 border-amber-300 text-amber-900';
+                  } else if (col.occupancy >= 80) {
+                    baseBgClass = isDark
+                      ? 'bg-blue-950/25 border-blue-500/40 text-blue-200'
+                      : 'bg-blue-50 border-blue-300 text-blue-900';
+                  } else {
+                    baseBgClass = isDark
+                      ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
+                      : 'bg-emerald-50 border-emerald-300 text-emerald-900';
+                  }
 
-              // High-impact active selection state
-              const selectedHighlightClass = isSelected
-                ? isDark
-                  ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_24px_rgba(16,185,129,0.35)] bg-gradient-to-b from-emerald-950/70 via-slate-900 to-emerald-950/50'
-                  : 'border-2 border-emerald-600 ring-2 ring-emerald-500/30 shadow-lg bg-emerald-50/80'
-                : baseBgClass;
+                  // High-impact active selection state
+                  const selectedHighlightClass = isSelected
+                    ? isDark
+                      ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/50 shadow-[0_0_24px_rgba(16,185,129,0.35)] bg-gradient-to-b from-emerald-950/70 via-slate-900 to-emerald-950/50'
+                      : 'border-2 border-emerald-600 ring-2 ring-emerald-500/30 shadow-lg bg-emerald-50/80'
+                    : baseBgClass;
 
-              return (
-                <div
-                  key={col.date}
-                  onClick={() => {
-                    setSelectedDate(col.date);
-                    setCustomPrice(col.price);
-                  }}
-                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex flex-col justify-between items-center text-center cursor-pointer transition-all duration-150 min-h-[142px] sm:min-h-[148px] active:scale-[0.98] select-none ${selectedHighlightClass}`}
-                >
-                  <div className="w-full flex flex-col items-center">
-                    {isSelected && (
-                      <span className="px-1.5 py-0.2 rounded-full bg-emerald-500 text-slate-950 font-black text-[9px] uppercase tracking-wider mb-0.5 shadow-sm">
-                        ACTIVE
-                      </span>
-                    )}
-                    <span className={`text-xs font-bold uppercase tracking-wider block transition-colors ${
-                      isSelected ? (isDark ? 'text-emerald-300' : 'text-emerald-800') : (isDark ? 'text-slate-300' : 'text-slate-700')
-                    }`}>
-                      {col.day}
-                    </span>
-                    <span className={`text-[11px] font-medium block -mt-0.5 ${
-                      isSelected ? (isDark ? 'text-emerald-400/90' : 'text-emerald-700') : (isDark ? 'text-slate-400' : 'text-slate-500')
-                    }`}>
-                      {formatDateShort(col.date)}
-                    </span>
-                  </div>
+                  return (
+                    <div
+                      key={col.date}
+                      onClick={() => {
+                        setSelectedDate(col.date);
+                        setCustomPrice(col.price);
+                      }}
+                      className={`p-1 sm:p-3 rounded-lg sm:rounded-2xl border flex flex-col justify-between items-center text-center cursor-pointer transition-all duration-150 min-h-[114px] sm:min-h-[148px] active:scale-[0.98] select-none ${selectedHighlightClass}`}
+                    >
+                      <div className="w-full flex flex-col items-center">
+                        {isSelected && (
+                          <span className="px-1 py-0.2 sm:px-1.5 sm:py-0.2 rounded-full bg-emerald-500 text-slate-950 font-black text-[8px] sm:text-[9px] uppercase tracking-wider mb-0.5 shadow-sm">
+                            <span className="sm:hidden">ACT</span>
+                            <span className="hidden sm:inline">ACTIVE</span>
+                          </span>
+                        )}
+                        <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider block transition-colors ${
+                          isSelected ? (isDark ? 'text-emerald-300' : 'text-emerald-800') : (isDark ? 'text-slate-300' : 'text-slate-700')
+                        }`}>
+                          {col.day}
+                        </span>
+                        <span className={`text-[9px] sm:text-[11px] font-medium block -mt-0.5 truncate ${
+                          isSelected ? (isDark ? 'text-emerald-400/90' : 'text-emerald-700') : (isDark ? 'text-slate-400' : 'text-slate-500')
+                        }`}>
+                          {formatDateShort(col.date)}
+                        </span>
+                      </div>
 
-                  <div className="my-1.5 text-center">
-                    <span className={`text-lg sm:text-xl font-black font-mono transition-colors ${
-                      isSelected
-                        ? isDark ? 'text-emerald-300 drop-shadow-[0_1px_8px_rgba(16,185,129,0.4)]' : 'text-emerald-700 font-extrabold'
-                        : isDark ? 'text-white' : 'text-slate-900'
-                    }`}>
-                      ₹{col.price}
-                    </span>
-                    <span className="block text-[10px] text-slate-400 -mt-0.5">/hr</span>
-                  </div>
+                      <div className="my-1 sm:my-1.5 text-center">
+                        <span className={`text-xs sm:text-xl font-black font-mono transition-colors ${
+                          isSelected
+                            ? isDark ? 'text-emerald-300 drop-shadow-[0_1px_8px_rgba(16,185,129,0.4)]' : 'text-emerald-700 font-extrabold'
+                            : isDark ? 'text-white' : 'text-slate-900'
+                        }`}>
+                          ₹{col.price}
+                        </span>
+                        <span className="block text-[8px] sm:text-[10px] text-slate-400 -mt-0.5">/hr</span>
+                      </div>
 
-                  <div className="w-full mt-auto pt-1">
-                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-1">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          isBlocked
-                            ? 'bg-rose-500'
-                            : col.occupancy > 90
-                            ? 'bg-amber-400'
-                            : 'bg-emerald-400'
-                        }`}
-                        style={{ width: `${isBlocked ? 0 : col.occupancy}%` }}
-                      />
+                      <div className="w-full mt-auto pt-0.5 sm:pt-1">
+                        <div className="h-1 sm:h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-0.5 sm:mb-1">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              isBlocked
+                                ? 'bg-rose-500'
+                                : col.occupancy > 90
+                                ? 'bg-amber-400'
+                                : 'bg-emerald-400'
+                            }`}
+                            style={{ width: `${isBlocked ? 0 : col.occupancy}%` }}
+                          />
+                        </div>
+                        <span className={`text-[8.5px] sm:text-[11px] block font-semibold truncate ${
+                          isSelected ? (isDark ? 'text-emerald-300' : 'text-emerald-800') : (isDark ? 'text-slate-400' : 'text-slate-600')
+                        }`}>
+                          {isBlocked ? 'Blocked' : <><span className="sm:hidden">{col.occupancy}%</span><span className="hidden sm:inline">{col.occupancy}% fill</span></>}
+                        </span>
+                      </div>
                     </div>
-                    <span className={`text-[11px] block font-semibold ${
-                      isSelected ? (isDark ? 'text-emerald-300' : 'text-emerald-800') : (isDark ? 'text-slate-400' : 'text-slate-600')
-                    }`}>
-                      {isBlocked ? 'Blocked' : `${col.occupancy}% fill`}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
       {/* Selected Day Configuration Controls */}
       <div className="p-4 sm:p-5 rounded-2xl bg-[#0f172a] border border-slate-800 space-y-3 sm:space-y-3.5 shadow-xl">
