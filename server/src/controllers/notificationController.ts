@@ -2,11 +2,15 @@ import { Response } from 'express';
 import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
-export const getNotifications = (req: AuthenticatedRequest, res: Response): void => {
+export const getNotifications = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user || dbStore.users[0];
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
+  }
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('notifications');
   }
 
   const notifs = dbStore.notifications.filter(

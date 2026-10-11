@@ -254,3 +254,12 @@ export const NotificationModel = mongoose.models.Notification || mongoose.model<
 export const PayoutModel = mongoose.models.Payout || mongoose.model<PayoutItem>('Payout', PayoutSchema, 'payouts');
 export const VerificationRequestModel = mongoose.models.VerificationRequest || mongoose.model<VerificationRequestItem>('VerificationRequest', VerificationRequestSchema, 'verification_requests');
 export const ReportModel = mongoose.models.Report || mongoose.model<ReportItem>('Report', ReportSchema, 'reports');
+
+const MetaSchema = new Schema(
+  {
+    key: { type: String, required: true, unique: true },
+    value: { type: Schema.Types.Mixed },
+  },
+  { strict: false, timestamps: true }
+);
+export const MetaModel = mongoose.models.Meta || mongoose.model('Meta', MetaSchema, 'meta');

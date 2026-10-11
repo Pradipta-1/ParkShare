@@ -4,11 +4,15 @@ import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { Vehicle } from '../models/types.js';
 
-export const getVehicles = (req: AuthenticatedRequest, res: Response): void => {
+export const getVehicles = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user;
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
+  }
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('vehicles');
   }
 
   const vehicles = dbStore.vehicles.filter((v) => v.userId === user.id);

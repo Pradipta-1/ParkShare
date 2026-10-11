@@ -4,7 +4,7 @@ import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { ParkingSpace, Amenity, VehicleType, ParkingType } from '../models/types.js';
 
-export const getParkingList = (req: Request, res: Response): void => {
+export const getParkingList = async (req: Request, res: Response): Promise<void> => {
   const {
     q,
     type,
@@ -18,6 +18,11 @@ export const getParkingList = (req: Request, res: Response): void => {
     category,
     ownerId,
   } = req.query;
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('bookings');
+  }
 
   // Reconcile space allotments with live booking states
   for (const space of dbStore.parkingSpaces) {
@@ -267,9 +272,10 @@ export const deleteParkingSpace = (req: AuthenticatedRequest, res: Response): vo
     return;
   }
 
-  dbStore.deleteParkingSpace(id);
+  const cancelledBookingIds = dbStore.deleteParkingSpace(id);
   res.json({
     success: true,
-    message: 'Parking space deleted',
+    message: 'Parking space deleted and all associated active reservations were cancelled',
+    cancelledBookingIds,
   });
 };

@@ -3,11 +3,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 
-export const getFavorites = (req: AuthenticatedRequest, res: Response): void => {
+export const getFavorites = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user;
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
+  }
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('favorites');
+    await dbStore.syncCollection('parkingSpaces');
   }
 
   const userFavs = dbStore.favorites.filter((f) => f.userId === user.id);

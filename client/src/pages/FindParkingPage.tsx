@@ -995,8 +995,8 @@ export const FindParkingPage: React.FC = () => {
             )}
           </div>
 
-          {/* Main Sheet Body */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-800">
+          {/* Main Sheet Body with safe bottom padding for MobileNav */}
+          <div className="flex-1 overflow-y-auto p-3 pb-36 space-y-3 scrollbar-thin scrollbar-thumb-slate-800">
             {/* If a space is specifically selected: show Google Maps style detailed card preview */}
             {selectedSpace && (
               <div className={`rounded-2xl border p-3.5 shadow-xl space-y-3 transition-all ${
@@ -1133,7 +1133,7 @@ export const FindParkingPage: React.FC = () => {
 
             {/* Full vertical list when expanded into full mode */}
             {isSheetExpanded && (
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3 pt-1 pb-12">
                 <div className="flex items-center justify-between text-xs text-slate-400 px-1">
                   <span>Available Parking Spots ({sortedSpaces.length})</span>
                   <span>Tap to view on map</span>

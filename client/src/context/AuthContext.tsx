@@ -46,6 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('parkshare_token'));
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const handleRevocation = () => {
+    localStorage.removeItem('parkshare_user');
+    localStorage.removeItem('parkshare_token');
+    api.removeToken();
+    setUser(null);
+    setToken(null);
+  };
+
   useEffect(() => {
     // If token exists, try fetching logged in user
     const checkAuth = async () => {
@@ -56,13 +64,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (res.success && res.user) {
             setUser(res.user);
             localStorage.setItem('parkshare_user', JSON.stringify(res.user));
+          } else {
+            handleRevocation();
           }
-        } catch {
-          // Keep saved user if backend is offline
+        } catch (err: any) {
+          const msg = (err?.message || '').toLowerCase();
+          if (
+            msg.includes('deleted') ||
+            msg.includes('no longer exists') ||
+            msg.includes('invalid') ||
+            msg.includes('expired') ||
+            msg.includes('not authenticated') ||
+            msg.includes('authorization') ||
+            msg.includes('unauthorized') ||
+            msg.includes('401')
+          ) {
+            // Account deleted in MongoDB! Expel immediately
+            handleRevocation();
+          }
         }
       }
     };
+
     checkAuth();
+
+    // Re-verify immediately whenever user switches back to the website window
+    const handleFocus = () => {
+      if (localStorage.getItem('parkshare_token')) {
+        checkAuth();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    // Listen for global 401 revocation event
+    const handleRevokeEvent = () => handleRevocation();
+    window.addEventListener('parkshare_auth_revoked', handleRevokeEvent);
+
+    // Heartbeat check every 4 seconds to immediately detect deletions in MongoDB
+    const heartbeat = setInterval(() => {
+      if (localStorage.getItem('parkshare_token')) {
+        checkAuth();
+      }
+    }, 4000);
+
+    // Synchronize auth state across open browser tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'parkshare_user' || e.key === 'parkshare_token') {
+        const updatedUser = getInitialUser();
+        const updatedToken = localStorage.getItem('parkshare_token');
+        setUser(updatedUser);
+        setToken(updatedToken);
+        if (updatedToken) {
+          api.setToken(updatedToken);
+        } else {
+          api.removeToken();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('parkshare_auth_revoked', handleRevokeEvent);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(heartbeat);
+    };
   }, []);
 
   const login = async (email: string, pass: string): Promise<User> => {

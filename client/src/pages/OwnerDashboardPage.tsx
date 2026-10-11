@@ -60,11 +60,17 @@ export const OwnerDashboardPage: React.FC = () => {
   const { notifications, markAsRead } = useNotifications();
   const navigate = useNavigate();
 
-  const hostName = user && user.role === 'owner' ? user.name : 'Vikramaditya Roy';
+  const hostName = user?.name || 'Vikramaditya Roy';
   const hostAvatar =
-    user && user.role === 'owner' && user.avatar
-      ? user.avatar
-      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80';
+    user?.avatar ||
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80';
+
+  // Redirect drivers to their own driver dashboard
+  useEffect(() => {
+    if (user && user.role === 'driver') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
@@ -121,7 +127,27 @@ export const OwnerDashboardPage: React.FC = () => {
         api.getBookings(undefined, true),
       ]);
 
-      // 1. Gather all bookings across API and localStorage
+      // 1. Spaces reconciliation
+      const localCustom: ParkingSpace[] = JSON.parse(
+        localStorage.getItem('parkshare_custom_spaces') || '[]'
+      );
+      let mergedSpaces: ParkingSpace[] = [];
+      const serverSpaces =
+        sRes.status === 'fulfilled' && sRes.value.success && Array.isArray(sRes.value.data)
+          ? sRes.value.data
+          : [];
+
+      if (serverSpaces.length > 0) {
+        const serverIds = new Set(serverSpaces.map((s) => s.id));
+        const customOnly = localCustom.filter((c) => !serverIds.has(c.id));
+        mergedSpaces = [...serverSpaces, ...customOnly];
+      } else {
+        mergedSpaces = [...localCustom];
+      }
+
+      const activeSpaceIds = new Set(mergedSpaces.map((s) => s.id));
+
+      // 2. Gather all bookings across API and localStorage
       const localBookingsRaw: Booking[] = JSON.parse(
         localStorage.getItem('parkshare_custom_bookings') || '[]'
       );
@@ -143,34 +169,17 @@ export const OwnerDashboardPage: React.FC = () => {
         allBookings = [...customToAdd, ...allBookings];
       }
 
-      // Filter out cancelled bookings
+      // Filter out cancelled bookings and bookings for deleted parking spaces
       const validBookings = allBookings.filter(
         (b) =>
           b.bookingStatus !== 'cancelled' &&
           !cancelledIds.includes(b.id) &&
-          !(b.bookingCode && cancelledIds.includes(b.bookingCode))
+          !(b.bookingCode && cancelledIds.includes(b.bookingCode)) &&
+          activeSpaceIds.has(b.parkingId) // Must belong to an active, existing parking space
       );
 
       // Set live driver reservations roster (with amount, date, timing)
       setRecentBookings(validBookings);
-
-      // 2. Spaces reconciliation
-      const localCustom: ParkingSpace[] = JSON.parse(
-        localStorage.getItem('parkshare_custom_spaces') || '[]'
-      );
-      let mergedSpaces: ParkingSpace[] = [];
-      const serverSpaces =
-        sRes.status === 'fulfilled' && sRes.value.success && Array.isArray(sRes.value.data)
-          ? sRes.value.data
-          : [];
-
-      if (serverSpaces.length > 0) {
-        const serverIds = new Set(serverSpaces.map((s) => s.id));
-        const customOnly = localCustom.filter((c) => !serverIds.has(c.id));
-        mergedSpaces = [...serverSpaces, ...customOnly];
-      } else {
-        mergedSpaces = [...localCustom];
-      }
 
       const ratingMap = new Map(localCustom.map((c: any) => [c.id, { rating: c.rating, reviewCount: c.reviewCount }]));
       const reconciledSpaces = mergedSpaces.map((space) => {
@@ -364,20 +373,56 @@ export const OwnerDashboardPage: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!spaceToDelete) return;
     setIsDeleting(true);
+    const spaceId = spaceToDelete.id;
+    const spaceTitle = spaceToDelete.title;
+
     try {
-      await api.deleteParkingSpace(spaceToDelete.id);
-      setSpaces((prev) => prev.filter((s) => s.id !== spaceToDelete.id));
-      setActionSuccess(`Parking space "${spaceToDelete.title}" has been permanently deleted.`);
-      setTimeout(() => setActionSuccess(''), 4000);
+      await api.deleteParkingSpace(spaceId);
     } catch {
-      // Fallback local deletion
-      setSpaces((prev) => prev.filter((s) => s.id !== spaceToDelete.id));
-      setActionSuccess(`Parking space "${spaceToDelete.title}" deleted.`);
-      setTimeout(() => setActionSuccess(''), 4000);
-    } finally {
-      setIsDeleting(false);
-      setSpaceToDelete(null);
+      // Proceed with local deletion cleanup
     }
+
+    // 1. Identify all bookings associated with this deleted space
+    const bookingsForDeletedSpace = recentBookings.filter((b) => b.parkingId === spaceId);
+    const bookingIdsToCancel = bookingsForDeletedSpace.flatMap((b) => [b.id, b.bookingCode].filter(Boolean) as string[]);
+
+    // 2. Persist cancellation in localStorage so it never comes back
+    const existingCancelled: string[] = JSON.parse(
+      localStorage.getItem('parkshare_cancelled_booking_ids') || '[]'
+    );
+    const updatedCancelled = Array.from(new Set([...existingCancelled, ...bookingIdsToCancel]));
+    localStorage.setItem('parkshare_cancelled_booking_ids', JSON.stringify(updatedCancelled));
+
+    // 3. Mark custom bookings in localStorage as cancelled & refunded
+    const localBookings: Booking[] = JSON.parse(
+      localStorage.getItem('parkshare_custom_bookings') || '[]'
+    );
+    const updatedCustomBookings = localBookings.map((b) =>
+      b.parkingId === spaceId
+        ? { ...b, bookingStatus: 'cancelled' as const, paymentStatus: 'refunded' as const }
+        : b
+    );
+    localStorage.setItem('parkshare_custom_bookings', JSON.stringify(updatedCustomBookings));
+
+    // 4. Remove from custom spaces in localStorage
+    const localSpaces: ParkingSpace[] = JSON.parse(
+      localStorage.getItem('parkshare_custom_spaces') || '[]'
+    );
+    const updatedSpaces = localSpaces.filter((s) => s.id !== spaceId);
+    localStorage.setItem('parkshare_custom_spaces', JSON.stringify(updatedSpaces));
+
+    // 5. Update UI state immediately: remove space & remove live driver reservations
+    setSpaces((prev) => prev.filter((s) => s.id !== spaceId));
+    setRecentBookings((prev) => prev.filter((b) => b.parkingId !== spaceId));
+
+    // 6. Notify other open components of the cancellation
+    window.dispatchEvent(new Event('parkshare_booking_cancelled'));
+
+    setActionSuccess(`Parking space "${spaceTitle}" has been permanently deleted and all associated driver reservations were immediately cancelled.`);
+    setTimeout(() => setActionSuccess(''), 4500);
+
+    setIsDeleting(false);
+    setSpaceToDelete(null);
   };
 
   const activeCount = useMemo(() => spaces.filter((s) => s.status === 'active').length, [spaces]);

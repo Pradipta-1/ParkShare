@@ -37,6 +37,7 @@ import {
   PayoutModel,
   VerificationRequestModel,
   ReportModel,
+  MetaModel,
 } from '../models/mongooseModels.js';
 
 class DataStore {
@@ -54,145 +55,258 @@ class DataStore {
   public payments: Payment[] = [];
   public isMongoConnected = false;
 
+  private syncInterval: any = null;
+  private changeStreams: any[] = [];
+
   // Sync memory store with MongoDB Atlas
   public async initFromMongo(): Promise<void> {
     try {
       this.isMongoConnected = true;
 
-      // 1. Users
-      const userCount = await UserModel.countDocuments();
-      if (userCount === 0) {
-        if (initialUsers.length > 0) await UserModel.insertMany(initialUsers);
-      } else {
-        const dbUsers = await UserModel.find().lean();
-        this.users = dbUsers.map((u: any) => ({
-          ...u,
-          id: u.id || u._id?.toString(),
-        })) as User[];
+      // Check if MongoDB was already initialized in the past
+      let isInitialized = false;
+      try {
+        const initMeta = await MetaModel.findOne({ key: 'db_initialized' });
+        isInitialized = Boolean(initMeta);
+      } catch {
+        isInitialized = false;
       }
 
-      // 2. Parking Spaces
-      const spaceCount = await ParkingSpaceModel.countDocuments();
-      if (spaceCount === 0) {
-        if (initialParkingSpaces.length > 0) await ParkingSpaceModel.insertMany(initialParkingSpaces);
-      } else {
-        const dbSpaces = await ParkingSpaceModel.find().lean();
-        this.parkingSpaces = dbSpaces.map((s: any) => ({
-          ...s,
-          id: s.id || s._id?.toString(),
-        })) as ParkingSpace[];
+      // If first-time deployment and not yet initialized, seed defaults once
+      if (!isInitialized) {
+        const userCount = await UserModel.countDocuments();
+        if (userCount === 0 && initialUsers.length > 0) {
+          await UserModel.insertMany(initialUsers).catch(() => {});
+        }
+
+        const spaceCount = await ParkingSpaceModel.countDocuments();
+        if (spaceCount === 0 && initialParkingSpaces.length > 0) {
+          await ParkingSpaceModel.insertMany(initialParkingSpaces).catch(() => {});
+        }
+
+        const vehicleCount = await VehicleModel.countDocuments();
+        if (vehicleCount === 0 && initialVehicles.length > 0) {
+          await VehicleModel.insertMany(initialVehicles).catch(() => {});
+        }
+
+        const bookingCount = await BookingModel.countDocuments();
+        if (bookingCount === 0 && initialBookings.length > 0) {
+          await BookingModel.insertMany(initialBookings).catch(() => {});
+        }
+
+        const reviewCount = await ReviewModel.countDocuments();
+        if (reviewCount === 0 && initialReviews.length > 0) {
+          await ReviewModel.insertMany(initialReviews).catch(() => {});
+        }
+
+        const favCount = await FavoriteModel.countDocuments();
+        if (favCount === 0 && initialFavorites.length > 0) {
+          await FavoriteModel.insertMany(initialFavorites).catch(() => {});
+        }
+
+        const payoutCount = await PayoutModel.countDocuments();
+        if (payoutCount === 0 && initialPayouts.length > 0) {
+          await PayoutModel.insertMany(initialPayouts).catch(() => {});
+        }
+
+        const vrCount = await VerificationRequestModel.countDocuments();
+        if (vrCount === 0 && initialVerificationRequests.length > 0) {
+          await VerificationRequestModel.insertMany(initialVerificationRequests).catch(() => {});
+        }
+
+        const repCount = await ReportModel.countDocuments();
+        if (repCount === 0 && initialReports.length > 0) {
+          await ReportModel.insertMany(initialReports).catch(() => {});
+        }
+
+        // Mark as initialized so deletions in MongoDB will NEVER be re-seeded
+        await MetaModel.findOneAndUpdate(
+          { key: 'db_initialized' },
+          { key: 'db_initialized', value: true },
+          { upsert: true }
+        ).catch(() => {});
       }
 
-      // 3. Vehicles
-      const vehicleCount = await VehicleModel.countDocuments();
-      if (vehicleCount === 0) {
-        if (initialVehicles.length > 0) await VehicleModel.insertMany(initialVehicles);
-      } else {
-        const dbVehicles = await VehicleModel.find().lean();
-        this.vehicles = dbVehicles.map((v: any) => ({
-          ...v,
-          id: v.id || v._id?.toString(),
-        })) as Vehicle[];
-      }
-
-      // 4. Bookings
-      const bookingCount = await BookingModel.countDocuments();
-      if (bookingCount === 0) {
-        if (initialBookings.length > 0) await BookingModel.insertMany(initialBookings);
-      } else {
-        const dbBookings = await BookingModel.find().lean();
-        this.bookings = dbBookings.map((b: any) => ({
-          ...b,
-          id: b.id || b._id?.toString(),
-        })) as Booking[];
-      }
-
-      // 5. Reviews
-      const reviewCount = await ReviewModel.countDocuments();
-      if (reviewCount === 0) {
-        if (initialReviews.length > 0) await ReviewModel.insertMany(initialReviews);
-      } else {
-        const dbReviews = await ReviewModel.find().lean();
-        this.reviews = dbReviews.map((r: any) => ({
-          ...r,
-          id: r.id || r._id?.toString(),
-        })) as Review[];
-      }
-
-      // 6. Favorites (Saved Spots)
-      const favCount = await FavoriteModel.countDocuments();
-      if (favCount === 0) {
-        if (initialFavorites.length > 0) await FavoriteModel.insertMany(initialFavorites);
-      } else {
-        const dbFavs = await FavoriteModel.find().lean();
-        this.favorites = dbFavs.map((f: any) => ({
-          ...f,
-          id: f.id || f._id?.toString(),
-        })) as Favorite[];
-      }
-
-      // 7. Messages (In-App Driver & Host Chat)
-      // 7. Messages (In-App Driver & Host Chat) - Real-time messages only
-      await MessageModel.deleteMany({
-        id: { $in: ['msg_rahul_1', 'msg_pooja_1', 'msg_amit_1', 'msg_vikram_1'] },
-      }).catch(() => {});
-      const dbMsgs = await MessageModel.find().lean();
-      this.messages = dbMsgs.map((m: any) => ({
-        ...m,
-        id: m.id || m._id?.toString(),
-      })) as MessageItem[];
-
-      // 8. Notifications (System & Activity Alerts)
-      await NotificationModel.deleteMany({
-        id: { $in: ['notif_init_msg_1', 'notif_init_msg_2', 'notif_init_msg_3', 'notif_init_msg_4'] },
-      }).catch(() => {});
-      const dbNotifs = await NotificationModel.find().lean();
-      this.notifications = dbNotifs.map((n: any) => ({
-        ...n,
-        id: n.id || n._id?.toString(),
-      })) as NotificationItem[];
-
-      // 9. Payouts (Host Earnings & Bank Withdrawals)
-      const payoutCount = await PayoutModel.countDocuments();
-      if (payoutCount === 0) {
-        if (initialPayouts.length > 0) await PayoutModel.insertMany(initialPayouts);
-      } else {
-        const dbPayouts = await PayoutModel.find().lean();
-        this.payouts = dbPayouts.map((p: any) => ({
-          ...p,
-          id: p.id || p._id?.toString(),
-        })) as PayoutItem[];
-      }
-
-      // 10. Verification Requests (Property Verification)
-      const vrCount = await VerificationRequestModel.countDocuments();
-      if (vrCount === 0) {
-        if (initialVerificationRequests.length > 0) await VerificationRequestModel.insertMany(initialVerificationRequests);
-      } else {
-        const dbVrs = await VerificationRequestModel.find().lean();
-        this.verificationRequests = dbVrs.map((v: any) => ({
-          ...v,
-          id: v.id || v._id?.toString(),
-        })) as VerificationRequestItem[];
-      }
-
-      // 11. Reports (Disputes & Incident Reports)
-      const repCount = await ReportModel.countDocuments();
-      if (repCount === 0) {
-        if (initialReports.length > 0) await ReportModel.insertMany(initialReports);
-      } else {
-        const dbReps = await ReportModel.find().lean();
-        this.reports = dbReps.map((r: any) => ({
-          ...r,
-          id: r.id || r._id?.toString(),
-        })) as ReportItem[];
-      }
+      // Populate directly from MongoDB - whatever exists in MongoDB is the single source of truth
+      await this.syncFromMongo();
 
       console.log(
         ` Connected & Synchronized with MongoDB Atlas: ${this.parkingSpaces.length} spots, ${this.bookings.length} bookings, ${this.users.length} users, ${this.vehicles.length} vehicles, ${this.favorites.length} favorites, ${this.messages.length} messages, ${this.notifications.length} notifs, ${this.payouts.length} payouts, ${this.verificationRequests.length} verifications, ${this.reports.length} reports.`
       );
+
+      // Start Real-Time Change Streams & Continuous Polling Sync
+      this.setupChangeStreams();
     } catch (err: any) {
       console.warn('⚠️ MongoDB Atlas initialization warning:', err.message);
+    }
+  }
+
+  // Cleanup active streams
+  public cleanupChangeStreams(): void {
+    for (const stream of this.changeStreams) {
+      try {
+        stream.close();
+      } catch {}
+    }
+    this.changeStreams = [];
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+  }
+
+  // Setup real-time change monitoring for MongoDB
+  public setupChangeStreams(): void {
+    if (!this.isMongoConnected) return;
+
+    this.cleanupChangeStreams();
+
+    const modelsToWatch = [
+      { model: UserModel, name: 'users' },
+      { model: ParkingSpaceModel, name: 'parkingSpaces' },
+      { model: BookingModel, name: 'bookings' },
+      { model: ReviewModel, name: 'reviews' },
+      { model: VehicleModel, name: 'vehicles' },
+      { model: FavoriteModel, name: 'favorites' },
+      { model: MessageModel, name: 'messages' },
+      { model: NotificationModel, name: 'notifications' },
+      { model: PayoutModel, name: 'payouts' },
+      { model: ReportModel, name: 'reports' },
+      { model: VerificationRequestModel, name: 'verificationRequests' },
+    ];
+
+    for (const { model, name } of modelsToWatch) {
+      try {
+        const stream = model.watch([], { fullDocument: 'default' });
+        stream.on('change', async (change: any) => {
+          console.log(`📡 [MongoDB Live Sync] Event '${change.operationType}' detected on '${name}'`);
+          await this.syncCollection(name);
+        });
+        stream.on('error', (err: any) => {
+          console.warn(`ChangeStream warning on ${name}:`, err.message);
+        });
+        this.changeStreams.push(stream);
+      } catch (err: any) {
+        console.warn(`Could not attach ChangeStream to ${name}:`, err.message);
+      }
+    }
+
+    // Safety net: Periodic 3-second sync guarantees any deletion directly from MongoDB
+    // (Compass, Atlas Web UI, mongosh, raw scripts) takes immediate effect across the site
+    this.syncInterval = setInterval(() => {
+      this.syncFromMongo().catch(() => {});
+    }, 3000);
+  }
+
+  // Synchronize a single collection immediately from MongoDB
+  public async syncCollection(name: string): Promise<void> {
+    if (!this.isMongoConnected) return;
+    try {
+      switch (name) {
+        case 'users': {
+          const dbUsers = await UserModel.find().lean();
+          this.users = dbUsers.map((u: any) => ({ ...u, id: u.id || u._id?.toString() })) as User[];
+          break;
+        }
+        case 'parkingSpaces': {
+          const dbSpaces = await ParkingSpaceModel.find().lean();
+          this.parkingSpaces = dbSpaces.map((s: any) => ({ ...s, id: s.id || s._id?.toString() })) as ParkingSpace[];
+          break;
+        }
+        case 'bookings': {
+          const dbBookings = await BookingModel.find().lean();
+          this.bookings = dbBookings.map((b: any) => ({ ...b, id: b.id || b._id?.toString() })) as Booking[];
+          break;
+        }
+        case 'vehicles': {
+          const dbVehicles = await VehicleModel.find().lean();
+          this.vehicles = dbVehicles.map((v: any) => ({ ...v, id: v.id || v._id?.toString() })) as Vehicle[];
+          break;
+        }
+        case 'reviews': {
+          const dbReviews = await ReviewModel.find().lean();
+          this.reviews = dbReviews.map((r: any) => ({ ...r, id: r.id || r._id?.toString() })) as Review[];
+          break;
+        }
+        case 'favorites': {
+          const dbFavs = await FavoriteModel.find().lean();
+          this.favorites = dbFavs.map((f: any) => ({ ...f, id: f.id || f._id?.toString() })) as Favorite[];
+          break;
+        }
+        case 'messages': {
+          const dbMsgs = await MessageModel.find().lean();
+          this.messages = dbMsgs.map((m: any) => ({ ...m, id: m.id || m._id?.toString() })) as MessageItem[];
+          break;
+        }
+        case 'notifications': {
+          const dbNotifs = await NotificationModel.find().lean();
+          this.notifications = dbNotifs.map((n: any) => ({ ...n, id: n.id || n._id?.toString() })) as NotificationItem[];
+          break;
+        }
+        case 'payouts': {
+          const dbPayouts = await PayoutModel.find().lean();
+          this.payouts = dbPayouts.map((p: any) => ({ ...p, id: p.id || p._id?.toString() })) as PayoutItem[];
+          break;
+        }
+        case 'verificationRequests': {
+          const dbVrs = await VerificationRequestModel.find().lean();
+          this.verificationRequests = dbVrs.map((v: any) => ({ ...v, id: v.id || v._id?.toString() })) as VerificationRequestItem[];
+          break;
+        }
+        case 'reports': {
+          const dbReps = await ReportModel.find().lean();
+          this.reports = dbReps.map((r: any) => ({ ...r, id: r.id || r._id?.toString() })) as ReportItem[];
+          break;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`Error syncing collection ${name}:`, err.message);
+    }
+  }
+
+  // Full continuous sync of all collections from MongoDB
+  public async syncFromMongo(): Promise<void> {
+    if (!this.isMongoConnected) return;
+    try {
+      const [
+        dbUsers,
+        dbSpaces,
+        dbVehicles,
+        dbBookings,
+        dbReviews,
+        dbFavs,
+        dbMsgs,
+        dbNotifs,
+        dbPayouts,
+        dbVrs,
+        dbReps,
+      ] = await Promise.all([
+        UserModel.find().lean(),
+        ParkingSpaceModel.find().lean(),
+        VehicleModel.find().lean(),
+        BookingModel.find().lean(),
+        ReviewModel.find().lean(),
+        FavoriteModel.find().lean(),
+        MessageModel.find().lean(),
+        NotificationModel.find().lean(),
+        PayoutModel.find().lean(),
+        VerificationRequestModel.find().lean(),
+        ReportModel.find().lean(),
+      ]);
+
+      this.users = dbUsers.map((u: any) => ({ ...u, id: u.id || u._id?.toString() })) as User[];
+      this.parkingSpaces = dbSpaces.map((s: any) => ({ ...s, id: s.id || s._id?.toString() })) as ParkingSpace[];
+      this.vehicles = dbVehicles.map((v: any) => ({ ...v, id: v.id || v._id?.toString() })) as Vehicle[];
+      this.bookings = dbBookings.map((b: any) => ({ ...b, id: b.id || b._id?.toString() })) as Booking[];
+      this.reviews = dbReviews.map((r: any) => ({ ...r, id: r.id || r._id?.toString() })) as Review[];
+      this.favorites = dbFavs.map((f: any) => ({ ...f, id: f.id || f._id?.toString() })) as Favorite[];
+      this.messages = dbMsgs.map((m: any) => ({ ...m, id: m.id || m._id?.toString() })) as MessageItem[];
+      this.notifications = dbNotifs.map((n: any) => ({ ...n, id: n.id || n._id?.toString() })) as NotificationItem[];
+      this.payouts = dbPayouts.map((p: any) => ({ ...p, id: p.id || p._id?.toString() })) as PayoutItem[];
+      this.verificationRequests = dbVrs.map((v: any) => ({ ...v, id: v.id || v._id?.toString() })) as VerificationRequestItem[];
+      this.reports = dbReps.map((r: any) => ({ ...r, id: r.id || r._id?.toString() })) as ReportItem[];
+    } catch {
+      // Ignore background sync errors
     }
   }
 
@@ -228,13 +342,65 @@ class DataStore {
     }
   }
 
-  public deleteParkingSpace(id: string) {
+  public deleteParkingSpace(id: string): string[] {
+    const deletedSpace = this.parkingSpaces.find((s) => s.id === id);
     this.parkingSpaces = this.parkingSpaces.filter((s) => s.id !== id);
+
+    // Cancel all associated active/confirmed bookings immediately
+    const cancelledBookingIds: string[] = [];
+    this.bookings = this.bookings.map((b) => {
+      if (b.parkingId === id && b.bookingStatus !== 'cancelled') {
+        cancelledBookingIds.push(b.id);
+        if (b.bookingCode) cancelledBookingIds.push(b.bookingCode);
+
+        // Refund the driver if applicable
+        if (b.userId) {
+          const driverUser = this.users.find((u) => u.id === b.userId);
+          if (driverUser) {
+            const refundAmount = b.totalAmount || b.subtotal || 0;
+            driverUser.walletBalance = (driverUser.walletBalance || 0) + refundAmount;
+            this.saveUser(driverUser);
+          }
+        }
+
+        // Create driver notification
+        const notifId = `notif_cancel_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const cancelNotif: NotificationItem = {
+          id: notifId,
+          userId: b.userId || 'usr_driver_1',
+          type: 'refund',
+          title: 'Booking Cancelled by Host',
+          message: `Your reservation #${b.bookingCode || b.id} at "${deletedSpace?.title || b.parkingTitle || 'Parking Space'}" was cancelled because the host removed this spot. A full refund of ₹${b.totalAmount || b.subtotal || 0} has been credited to your wallet balance.`,
+          dateGroup: 'Today',
+          read: false,
+          createdAt: new Date().toISOString(),
+          link: '/bookings',
+        };
+        this.notifications.unshift(cancelNotif);
+        if (this.isMongoConnected) {
+          NotificationModel.create(cancelNotif).catch(() => {});
+        }
+
+        return {
+          ...b,
+          bookingStatus: 'cancelled' as const,
+          paymentStatus: 'refunded' as const,
+        };
+      }
+      return b;
+    });
+
     if (this.isMongoConnected) {
       ParkingSpaceModel.deleteOne({ id }).catch((e) =>
         console.error('Mongo deleteParkingSpace error:', e.message)
       );
+      BookingModel.updateMany(
+        { parkingId: id, bookingStatus: { $ne: 'cancelled' } },
+        { bookingStatus: 'cancelled', paymentStatus: 'refunded' }
+      ).catch((e) => console.error('Mongo cancelBookingsOnDelete error:', e.message));
     }
+
+    return cancelledBookingIds;
   }
 
   public saveBooking(booking: Booking) {

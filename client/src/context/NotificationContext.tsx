@@ -98,11 +98,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     window.addEventListener('parkshare_notification_added', handleEvent);
     window.addEventListener('parkshare_message_received', handleEvent);
     window.addEventListener('storage', handleEvent);
+    window.addEventListener('focus', handleEvent);
+
+    const interval = setInterval(() => {
+      refreshNotifications();
+    }, 5000);
 
     return () => {
       window.removeEventListener('parkshare_notification_added', handleEvent);
       window.removeEventListener('parkshare_message_received', handleEvent);
       window.removeEventListener('storage', handleEvent);
+      window.removeEventListener('focus', handleEvent);
+      clearInterval(interval);
     };
   }, [refreshNotifications]);
 

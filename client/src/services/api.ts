@@ -60,6 +60,9 @@ class ApiService {
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401) {
+          window.dispatchEvent(new CustomEvent('parkshare_auth_revoked', { detail: data.message }));
+        }
         throw new Error(data.message || 'API request failed');
       }
       return data;

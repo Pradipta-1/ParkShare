@@ -36,7 +36,11 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
       !b.ownerId ||
       mySpaces.some((s) => s.id === b.parkingId)
   );
-  const validBookings = myBookings.filter((b) => b.bookingStatus !== 'cancelled');
+  const validBookings = myBookings.filter(
+    (b) =>
+      b.bookingStatus !== 'cancelled' &&
+      mySpaces.some((s) => s.id === b.parkingId)
+  );
   const myPayouts = dbStore.payouts.filter((p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1');
 
   const totalEarnings = validBookings.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0);

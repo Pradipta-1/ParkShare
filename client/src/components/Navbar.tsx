@@ -22,7 +22,6 @@ import {
   Calendar,
   DollarSign,
   Building,
-  Repeat,
   Settings,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -316,16 +315,6 @@ export const Navbar: React.FC = () => {
                             Edit
                           </span>
                         </Link>
-
-                        <Link
-                          to="/login"
-                          onClick={() => setShowUserMenu(false)}
-                          className={`w-full flex items-center gap-2.5 px-4 py-2 text-xs transition-colors text-left ${
-                            isDark ? 'text-slate-300 hover:bg-slate-800 hover:text-white' : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                          }`}
-                        >
-                          <Repeat className="w-4 h-4 text-slate-400" /> Switch / Demo Roles
-                        </Link>
                       </div>
 
                       {/* Prominent High-Contrast Sign Out Button */}
@@ -365,9 +354,6 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <span>Log in</span>
-                  <span className="hidden sm:inline-block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                    Testing accounts
-                  </span>
                 </Link>
                 <Link
                   to="/login?mode=signup"
@@ -569,16 +555,26 @@ export const Navbar: React.FC = () => {
             )}
 
             <div className={`pt-2 border-t space-y-1.5 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isDark ? 'text-slate-200 hover:bg-slate-800 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                Sign In / Switch Account
-              </Link>
-              {user && (
+              {!user ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    to="/login?mode=signin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`block px-3 py-2 text-center rounded-lg text-sm font-semibold transition-colors ${
+                      isDark ? 'text-slate-200 hover:bg-slate-800 hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    Log In
+                  </Link>
+                  <Link
+                    to="/login?mode=signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2 text-center rounded-lg text-sm font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-colors"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              ) : (
                 <>
                   <Link
                     to="/settings"

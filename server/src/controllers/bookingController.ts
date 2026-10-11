@@ -190,11 +190,15 @@ export const createBooking = (req: AuthenticatedRequest, res: Response): void =>
   });
 };
 
-export const getBookings = (req: AuthenticatedRequest, res: Response): void => {
+export const getBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user;
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
+  }
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('bookings');
   }
 
   const { status, asOwner } = req.query;

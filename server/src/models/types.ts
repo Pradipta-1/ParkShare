@@ -148,6 +148,7 @@ export interface NotificationItem {
   dateGroup: 'Today' | 'Yesterday' | 'Earlier this week' | 'Older';
   read: boolean;
   createdAt: string;
+  link?: string;
 }
 
 export interface MessageItem {

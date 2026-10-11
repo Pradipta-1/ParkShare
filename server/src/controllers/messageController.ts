@@ -5,9 +5,18 @@ import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { MessageItem, NotificationItem } from '../models/types.js';
 
 // GET /api/messages/conversations - Multi-customer conversation list (real-time only)
-export const getConversations = (req: AuthenticatedRequest, res: Response): void => {
+export const getConversations = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user || dbStore.users[0];
+  if (!user) {
+    res.status(401).json({ success: false, message: 'Unauthorized' });
+    return;
+  }
   const isOwner = user.role === 'owner';
+
+  // Ensure latest sync from MongoDB so deleted messages are immediately gone
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('messages');
+  }
 
   // Find all messages involving this user
   const userMessages = dbStore.messages.filter(
@@ -80,9 +89,14 @@ export const getConversations = (req: AuthenticatedRequest, res: Response): void
 };
 
 // GET /api/messages/:bookingId - Get messages for specific conversation/booking & mark as read
-export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): void => {
+export const getMessagesByBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { bookingId } = req.params;
   const user = req.user || dbStore.users[0];
+
+  // Ensure latest sync from MongoDB so deleted messages are immediately gone
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('messages');
+  }
 
   // Match booking or conversation
   let booking = dbStore.bookings.find(
@@ -90,7 +104,7 @@ export const getMessagesByBooking = (req: AuthenticatedRequest, res: Response): 
   );
 
   if (!booking && (bookingId === 'latest' || !bookingId)) {
-    booking = dbStore.bookings.find((b) => b.userId === user.id) || dbStore.bookings[0];
+    booking = dbStore.bookings.find((b) => b.userId === user?.id) || dbStore.bookings[0];
   }
 
   const messages = dbStore.messages.filter(

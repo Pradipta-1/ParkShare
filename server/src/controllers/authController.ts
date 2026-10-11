@@ -3,8 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { dbStore } from '../store/dbStore.js';
 import { generateToken, AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { User } from '../models/types.js';
+import { UserModel } from '../models/mongooseModels.js';
 
-export const register = (req: Request, res: Response): void => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, role = 'driver', phone } = req.body;
 
   if (!name || !email || !password) {
@@ -12,7 +13,13 @@ export const register = (req: Request, res: Response): void => {
     return;
   }
 
-  const existing = dbStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const cleanEmail = email.toLowerCase().trim();
+  let existing = dbStore.users.find((u) => u.email.toLowerCase() === cleanEmail);
+  if (dbStore.isMongoConnected) {
+    const dbExisting = await UserModel.findOne({ email: cleanEmail }).lean();
+    if (dbExisting) existing = dbExisting as any;
+  }
+
   if (existing) {
     res.status(400).json({ success: false, message: 'An account with this email already exists' });
     return;
@@ -21,7 +28,7 @@ export const register = (req: Request, res: Response): void => {
   const newUser: User = {
     id: `usr_${uuidv4().substring(0, 8)}`,
     name,
-    email,
+    email: cleanEmail,
     password,
     role: role === 'owner' ? 'owner' : 'driver',
     phone: phone || '+91 98300 00000',
@@ -43,7 +50,7 @@ export const register = (req: Request, res: Response): void => {
   });
 };
 
-export const login = (req: Request, res: Response): void => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -51,11 +58,22 @@ export const login = (req: Request, res: Response): void => {
     return;
   }
 
-  const user = dbStore.users.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && (u.password === password || password === 'password123')
-  );
+  const cleanEmail = email.toLowerCase().trim();
+  let user: User | undefined;
 
-  if (!user) {
+  if (dbStore.isMongoConnected) {
+    const dbUser: any = await UserModel.findOne({ email: cleanEmail }).lean();
+    if (dbUser) {
+      user = {
+        ...dbUser,
+        id: dbUser.id || dbUser._id?.toString(),
+      } as User;
+    }
+  } else {
+    user = dbStore.users.find((u) => u.email.toLowerCase() === cleanEmail);
+  }
+
+  if (!user || (user.password && user.password !== password)) {
     res.status(401).json({ success: false, message: 'Invalid email or password' });
     return;
   }

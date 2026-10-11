@@ -48,27 +48,9 @@ export const LoginPage: React.FC = () => {
     }
   });
 
-  // Form fields
-  const [email, setEmail] = useState<string>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('mode') === 'signup') return '';
-      const r = params.get('role');
-      if (r === 'owner') return 'owner@parkshare.com';
-      if (r === 'admin') return 'admin@parkshare.com';
-      return 'driver@parkshare.com';
-    } catch {
-      return 'driver@parkshare.com';
-    }
-  });
-  const [password, setPassword] = useState<string>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('mode') === 'signup' ? '' : 'password123';
-    } catch {
-      return 'password123';
-    }
-  });
+  // Form fields (blank by default for standard web login)
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -77,24 +59,12 @@ export const LoginPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Switch role handler with appropriate defaults
+  // Switch role handler for registration
   const handleSelectRole = (r: 'driver' | 'owner' | 'admin') => {
     if (mode === 'signup' && r === 'admin') return;
     setSelectedRole(r);
     setErrorMsg(null);
     setSuccessMsg(null);
-    if (mode === 'signin') {
-      if (r === 'driver') {
-        setEmail('driver@parkshare.com');
-        setPassword('password123');
-      } else if (r === 'owner') {
-        setEmail('owner@parkshare.com');
-        setPassword('password123');
-      } else if (r === 'admin') {
-        setEmail('admin@parkshare.com');
-        setPassword('password123');
-      }
-    }
   };
 
   React.useEffect(() => {
@@ -103,21 +73,9 @@ export const LoginPage: React.FC = () => {
     const m = params.get('mode');
     if (m === 'signup') {
       setMode('signup');
-      setEmail('');
-      setPassword('');
       setSelectedRole((prev) => (prev === 'admin' ? 'driver' : prev));
     } else if (m === 'signin') {
       setMode('signin');
-      if (r === 'driver' || (!r && selectedRole === 'driver')) {
-        setEmail('driver@parkshare.com');
-        setPassword('password123');
-      } else if (r === 'owner' || selectedRole === 'owner') {
-        setEmail('owner@parkshare.com');
-        setPassword('password123');
-      } else if (r === 'admin' || selectedRole === 'admin') {
-        setEmail('admin@parkshare.com');
-        setPassword('password123');
-      }
     }
     if (r === 'driver' || r === 'owner' || (r === 'admin' && m !== 'signup')) {
       handleSelectRole(r);
@@ -204,84 +162,47 @@ export const LoginPage: React.FC = () => {
             </span>
           </Link>
           <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
-            {mode === 'signin' ? 'Account Sign In' : 'Create Account'}
+            {mode === 'signin' ? 'Account Sign In' : 'Create Free Account'}
           </h1>
-          <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 leading-tight">
-            {selectedRole === 'driver' && 'Customer Profile: Find spots, manage vehicles & entry passes'}
-            {selectedRole === 'owner' && 'Space Owner Profile: Host parking, manage rates & earnings'}
-            {selectedRole === 'admin' && mode === 'signin' && 'Admin Profile: Platform verifications & system governance'}
+          <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-tight">
+            {mode === 'signin'
+              ? 'Enter your email and password to access your account'
+              : 'Join ParkShare to find spots or monetize your parking space'}
           </p>
         </div>
 
-        {/* Profile Role Switcher (Customer & Owner in signup; Customer, Owner & Admin in signin) */}
-        <div className="mb-2 sm:mb-3.5">
-          <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1 text-center">
-            {mode === 'signup' ? 'Choose Your Profile' : 'Choose Your Login Profile'}
-          </label>
-          <div className={`grid ${mode === 'signup' ? 'grid-cols-2' : 'grid-cols-3'} gap-1 p-0.5 sm:p-1 bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-800 text-[11px] sm:text-xs font-bold`}>
-            <button
-              type="button"
-              onClick={() => handleSelectRole('driver')}
-              className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 text-center ${
-                selectedRole === 'driver'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Car className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>Customer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectRole('owner')}
-              className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
-                selectedRole === 'owner'
-                  ? 'bg-blue-500 text-white shadow-md shadow-blue-500/25'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span>Owner</span>
-            </button>
-            {mode === 'signin' && (
+        {/* Account Role Selection for Sign Up Only */}
+        {mode === 'signup' && (
+          <div className="mb-3 sm:mb-4">
+            <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-1.5 text-center">
+              Register as:
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold">
               <button
                 type="button"
-                onClick={() => handleSelectRole('admin')}
-                className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
-                  selectedRole === 'admin'
-                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
+                onClick={() => handleSelectRole('driver')}
+                className={`py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-center ${
+                  selectedRole === 'driver'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                <span>Admin</span>
+                <Car className="w-3.5 h-3.5" />
+                <span>Customer / Driver</span>
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Autofill Demo Helper Button for Active Selected Role (Signin Only) */}
-        {mode === 'signin' && (
-          <div className="mb-2 sm:mb-3.5">
-            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5 sm:mb-1 text-center tracking-wide">
-              testing accounts
-            </span>
-            <button
-              type="button"
-              onClick={() => handleSelectRole(selectedRole)}
-              className={`w-full py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl border text-[10px] sm:text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                selectedRole === 'driver'
-                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                  : selectedRole === 'owner'
-                  ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30'
-                  : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/30'
-              }`}
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>
-                Auto-fill {selectedRole === 'driver' ? 'Customer' : selectedRole === 'owner' ? 'Owner' : 'Super Admin'} Demo Credentials
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleSelectRole('owner')}
+                className={`py-2 px-2 rounded-lg transition-all flex items-center justify-center gap-1.5 text-center ${
+                  selectedRole === 'owner'
+                    ? 'bg-blue-500 text-white shadow-md shadow-blue-500/25'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>Space Owner</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -330,7 +251,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           <div>
-            <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-0.5">Email / Username</label>
+            <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-0.5">Email address</label>
             <div className="relative">
               <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -338,7 +259,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={mode === 'signup' ? 'name@example.com' : 'driver@parkshare.com'}
+                placeholder="name@example.com"
                 className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
@@ -366,7 +287,7 @@ export const LoginPage: React.FC = () => {
               {mode === 'signin' && (
                 <button
                   type="button"
-                  onClick={() => alert('For demo, use password: password123')}
+                  onClick={() => setErrorMsg('If an account exists for this email, password reset instructions have been sent.')}
                   className="text-[10px] sm:text-[11px] text-emerald-400 hover:underline"
                 >
                   Forgot password?
@@ -380,7 +301,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === 'signup' ? 'Create a strong password' : '••••••••••••'}
+                placeholder={mode === 'signup' ? 'Create a secure password' : 'Enter your password'}
                 className="w-full pl-8 sm:pl-10 pr-9 sm:pr-10 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
               />
               <button
@@ -411,12 +332,7 @@ export const LoginPage: React.FC = () => {
 
         {/* Switch mode footer */}
         <div className="mt-2.5 sm:mt-5 pt-2 sm:pt-3.5 border-t border-slate-800 text-center text-[10px] sm:text-xs text-slate-400">
-          {mode === 'signin' && selectedRole === 'admin' ? (
-            <p className="text-slate-400 flex items-center justify-center gap-1.5">
-              <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400" />
-              <span>Admin credentials are provisioned by Security Operations.</span>
-            </p>
-          ) : mode === 'signin' ? (
+          {mode === 'signin' ? (
             <p>
               Don't have an account yet?{' '}
               <button
@@ -427,13 +343,13 @@ export const LoginPage: React.FC = () => {
                   setPassword('');
                   setName('');
                   setPhone('');
-                  setSelectedRole((prev) => (prev === 'admin' ? 'driver' : prev));
+                  setSelectedRole('driver');
                   setErrorMsg(null);
                   setSuccessMsg(null);
                 }}
                 className="text-emerald-400 font-bold hover:underline"
               >
-                Sign up as {selectedRole === 'owner' ? 'an Owner' : 'a Customer'}
+                Sign up
               </button>
             </p>
           ) : (
@@ -443,10 +359,9 @@ export const LoginPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setMode('signin');
-                  const targetRole = selectedRole === 'admin' ? 'driver' : selectedRole;
-                  setSelectedRole(targetRole);
-                  setEmail(targetRole === 'owner' ? 'owner@parkshare.com' : 'driver@parkshare.com');
-                  setPassword('password123');
+                  setSelectedRole('driver');
+                  setEmail('');
+                  setPassword('');
                   setErrorMsg(null);
                   setSuccessMsg(null);
                 }}

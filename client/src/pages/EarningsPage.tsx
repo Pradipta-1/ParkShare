@@ -198,14 +198,52 @@ export const EarningsPage: React.FC = () => {
   };
 
   const handleDownloadStatement = () => {
-    const csvContent = "data:text/csv;charset=utf-8,Date,TransactionID,Description,Amount,Status\n2026-10-06,TXN-9021839210,Central Avenue Spot P24,120,Completed\n2026-10-05,TXN-883192001,Metro Station Hub Spot M08,105,Completed\n2026-10-04,TXN-771829104,Airport Express Bay A02,240,Completed";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `ParkShare_Statement_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const headers = ['Date', 'Reference ID', 'Parking Space / Details', 'Amount (INR)', 'Status'];
+      const dataRows = (payouts && payouts.length > 0)
+        ? payouts.map((p) => {
+            const date = p.date || new Date().toISOString().split('T')[0];
+            const refId = p.bookingCode || p.id || 'TXN-SETTLED';
+            const details = `"${(p.method || 'Parking Earnings').replace(/"/g, '""')}"`;
+            const amount = p.amount || 0;
+            const status = (p.status || 'completed').toUpperCase();
+            return `${date},${refId},${details},${amount},${status}`;
+          })
+        : [
+            `${new Date().toISOString().split('T')[0]},REF-INITIAL,"Host Account Initialized",0,ACTIVE`,
+          ];
+
+      const summaryRows = [
+        '',
+        `Total Settled Earnings,,,${summary.totalEarnings || 0},INR`,
+        `Available Withdrawal Balance,,,${summary.pendingPayout || 0},INR`,
+        `Direct Deposits Completed,,,${summary.paidOut || 0},INR`,
+      ];
+
+      // Add UTF-8 BOM (\uFEFF) so Excel and mobile spreadsheet viewers render correctly
+      const csvContent = '\uFEFF' + [headers.join(','), ...dataRows, ...summaryRows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const filename = `ParkShare_Host_Statement_${new Date().toISOString().split('T')[0]}.csv`;
+
+      // Cross-platform URL object for desktop and mobile browsers
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename);
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+
+      setPayoutSuccessMsg(`Statement downloaded: ${filename}`);
+      setTimeout(() => setPayoutSuccessMsg(''), 4500);
+    } catch (err) {
+      console.error('Failed to download CSV statement:', err);
+    }
   };
 
   return (
