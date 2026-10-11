@@ -9,12 +9,17 @@ interface ThemeContextType {
   isDark: boolean;
 }
 
+const STORAGE_KEY = 'parkshare_theme_v2';
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
-      const saved = localStorage.getItem('parkshare_theme');
+      // Clear legacy key from older versions that automatically saved 'dark'
+      localStorage.removeItem('parkshare_theme');
+
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === 'light' || saved === 'dark') {
         return saved;
       }
@@ -30,11 +35,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.classList.add(targetTheme);
     root.setAttribute('data-theme', targetTheme);
     root.style.colorScheme = targetTheme;
-    try {
-      localStorage.setItem('parkshare_theme', targetTheme);
-    } catch {
-      // Storage unavailable
-    }
   };
 
   useEffect(() => {
@@ -42,10 +42,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setThemeState((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        // Storage unavailable
+      }
+      return next;
+    });
   };
 
   const setTheme = (newTheme: Theme) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, newTheme);
+    } catch {
+      // Storage unavailable
+    }
     setThemeState(newTheme);
   };
 
