@@ -34,7 +34,6 @@ function MainLayout() {
   const isLoginPage = location.pathname === '/login';
   const isLandingPage = location.pathname === '/';
   const isMessagingPage = location.pathname === '/messages';
-  const hideFooter = isLoginPage || location.pathname === '/add-space' || isMessagingPage;
 
   return (
     <div
@@ -79,8 +78,8 @@ function MainLayout() {
         </Routes>
       </div>
 
-      {/* Hide Footer on Login Page and Add Space Wizard */}
-      {!hideFooter && <Footer />}
+      {/* Show Footer only on Landing Page */}
+      {isLandingPage && <Footer />}
 
       {/* Hide Mobile Bottom Nav on Login Page and Landing Page */}
       {!isLoginPage && !isLandingPage && <MobileNav />}

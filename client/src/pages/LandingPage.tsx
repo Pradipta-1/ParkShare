@@ -186,6 +186,9 @@ export const LandingPage: React.FC = () => {
                     >
                       <LogIn className="w-4 h-4 stroke-[2.5]" />
                       <span>Log In / Sign In</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-950/20 text-slate-950 border border-slate-950/15">
+                        Testing accounts
+                      </span>
                     </button>
                     <button
                       type="button"

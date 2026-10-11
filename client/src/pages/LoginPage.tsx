@@ -18,7 +18,6 @@ import {
   ParkingCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ThemeToggle } from '../components/ThemeToggle';
 import { UserRole } from '../types';
 
 export const LoginPage: React.FC = () => {
@@ -27,14 +26,49 @@ export const LoginPage: React.FC = () => {
   const { login, register, isLoading } = useAuth();
 
   // Mode: signin or signup
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('mode') === 'signup' ? 'signup' : 'signin';
+    } catch {
+      return 'signin';
+    }
+  });
 
   // Selected role for login/signup
-  const [selectedRole, setSelectedRole] = useState<'driver' | 'owner' | 'admin'>('driver');
+  const [selectedRole, setSelectedRole] = useState<'driver' | 'owner' | 'admin'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const r = params.get('role');
+      if (r === 'owner') return 'owner';
+      if (r === 'admin' && params.get('mode') !== 'signup') return 'admin';
+      return 'driver';
+    } catch {
+      return 'driver';
+    }
+  });
 
   // Form fields
-  const [email, setEmail] = useState<string>('driver@parkshare.com');
-  const [password, setPassword] = useState<string>('password123');
+  const [email, setEmail] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('mode') === 'signup') return '';
+      const r = params.get('role');
+      if (r === 'owner') return 'owner@parkshare.com';
+      if (r === 'admin') return 'admin@parkshare.com';
+      return 'driver@parkshare.com';
+    } catch {
+      return 'driver@parkshare.com';
+    }
+  });
+  const [password, setPassword] = useState<string>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('mode') === 'signup' ? '' : 'password123';
+    } catch {
+      return 'password123';
+    }
+  });
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -45,19 +79,21 @@ export const LoginPage: React.FC = () => {
 
   // Switch role handler with appropriate defaults
   const handleSelectRole = (r: 'driver' | 'owner' | 'admin') => {
+    if (mode === 'signup' && r === 'admin') return;
     setSelectedRole(r);
     setErrorMsg(null);
     setSuccessMsg(null);
-    if (r === 'driver') {
-      setEmail('driver@parkshare.com');
-      setPassword('password123');
-    } else if (r === 'owner') {
-      setEmail('owner@parkshare.com');
-      setPassword('password123');
-    } else if (r === 'admin') {
-      setEmail('admin@parkshare.com');
-      setPassword('password123');
-      setMode('signin'); // Admin accounts are signin only
+    if (mode === 'signin') {
+      if (r === 'driver') {
+        setEmail('driver@parkshare.com');
+        setPassword('password123');
+      } else if (r === 'owner') {
+        setEmail('owner@parkshare.com');
+        setPassword('password123');
+      } else if (r === 'admin') {
+        setEmail('admin@parkshare.com');
+        setPassword('password123');
+      }
     }
   };
 
@@ -65,10 +101,25 @@ export const LoginPage: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const r = params.get('role');
     const m = params.get('mode');
-    if (m === 'signup' || m === 'signin') {
-      setMode(m);
+    if (m === 'signup') {
+      setMode('signup');
+      setEmail('');
+      setPassword('');
+      setSelectedRole((prev) => (prev === 'admin' ? 'driver' : prev));
+    } else if (m === 'signin') {
+      setMode('signin');
+      if (r === 'driver' || (!r && selectedRole === 'driver')) {
+        setEmail('driver@parkshare.com');
+        setPassword('password123');
+      } else if (r === 'owner' || selectedRole === 'owner') {
+        setEmail('owner@parkshare.com');
+        setPassword('password123');
+      } else if (r === 'admin' || selectedRole === 'admin') {
+        setEmail('admin@parkshare.com');
+        setPassword('password123');
+      }
     }
-    if (r === 'driver' || r === 'owner' || r === 'admin') {
+    if (r === 'driver' || r === 'owner' || (r === 'admin' && m !== 'signup')) {
       handleSelectRole(r);
     }
   }, [location.search]);
@@ -120,7 +171,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between items-center px-4 py-6 sm:py-10 relative bg-[#080d16]">
+    <div className="min-h-[100dvh] flex flex-col justify-between items-center px-3 py-2 sm:px-4 sm:py-8 relative bg-[#080d16] overflow-x-hidden">
       {/* Background ambient lighting */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]"></div>
@@ -128,112 +179,116 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Standalone Top Bar */}
-      <header className="w-full max-w-5xl flex items-center justify-between mb-4 z-10">
+      <header className="w-full max-w-5xl flex items-center justify-between mb-1.5 sm:mb-4 z-10 shrink-0">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white transition"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] sm:text-xs font-semibold text-slate-300 hover:text-white transition"
         >
           <span>← Back to Homepage</span>
         </Link>
-        <div className="flex items-center gap-2.5">
-          <ThemeToggle />
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Bank-Grade 256-Bit Encryption</span>
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden sm:inline">Bank-Grade 256-Bit Encryption</span>
         </div>
       </header>
 
-      <div className="w-full max-w-md bg-[#0f172a]/95 backdrop-blur-2xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative my-auto">
+      <div className="w-full max-w-md bg-[#0f172a]/95 backdrop-blur-2xl border border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-7 shadow-2xl relative my-auto shrink-0">
         {/* Header Branding */}
-        <div className="text-center mb-6">
-          <Link to="/" className="inline-flex items-center gap-2 mb-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform">
-              <span className="font-black text-white text-lg">P</span>
+        <div className="text-center mb-2 sm:mb-4">
+          <Link to="/" className="inline-flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2 group">
+            <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform">
+              <span className="font-black text-white text-sm sm:text-lg">P</span>
             </div>
-            <span className="text-xl font-extrabold text-white tracking-tight">
+            <span className="text-base sm:text-xl font-extrabold text-white tracking-tight">
               Park<span className="text-emerald-400">Share</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-black text-white tracking-tight">
+          <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight">
             {mode === 'signin' ? 'Account Sign In' : 'Create Account'}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1 leading-tight">
             {selectedRole === 'driver' && 'Customer Profile: Find spots, manage vehicles & entry passes'}
             {selectedRole === 'owner' && 'Space Owner Profile: Host parking, manage rates & earnings'}
-            {selectedRole === 'admin' && 'Admin Profile: Platform verifications & system governance'}
+            {selectedRole === 'admin' && mode === 'signin' && 'Admin Profile: Platform verifications & system governance'}
           </p>
         </div>
 
-        {/* 3-Way Dedicated Profile Role Switcher */}
-        <div className="mb-5">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2 text-center">
-            Choose Your Login Profile
+        {/* Profile Role Switcher (Customer & Owner in signup; Customer, Owner & Admin in signin) */}
+        <div className="mb-2 sm:mb-3.5">
+          <label className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1 text-center">
+            {mode === 'signup' ? 'Choose Your Profile' : 'Choose Your Login Profile'}
           </label>
-          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-900 rounded-2xl border border-slate-800 text-xs font-bold">
+          <div className={`grid ${mode === 'signup' ? 'grid-cols-2' : 'grid-cols-3'} gap-1 p-0.5 sm:p-1 bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-800 text-[11px] sm:text-xs font-bold`}>
             <button
               type="button"
               onClick={() => handleSelectRole('driver')}
-              className={`py-2 px-2 rounded-xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-center ${
+              className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1 sm:gap-1.5 text-center ${
                 selectedRole === 'driver'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Car className="w-3.5 h-3.5" />
+              <Car className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>Customer</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelectRole('owner')}
-              className={`py-2 px-2 rounded-xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-center ${
+              className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
                 selectedRole === 'owner'
                   ? 'bg-blue-500 text-white shadow-md shadow-blue-500/25'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Building className="w-3.5 h-3.5" />
+              <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               <span>Owner</span>
             </button>
-            <button
-              type="button"
-              onClick={() => handleSelectRole('admin')}
-              className={`py-2 px-2 rounded-xl transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-center ${
-                selectedRole === 'admin'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
+            {mode === 'signin' && (
+              <button
+                type="button"
+                onClick={() => handleSelectRole('admin')}
+                className={`py-1 sm:py-2 px-1.5 sm:px-2 rounded-lg sm:rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
+                  selectedRole === 'admin'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>Admin</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Autofill Demo Helper Button for Active Selected Role */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => handleSelectRole(selectedRole)}
-            className={`w-full py-1.5 px-3 rounded-xl border text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 ${
-              selectedRole === 'driver'
-                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                : selectedRole === 'owner'
-                ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30'
-                : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/30'
-            }`}
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>
-              Auto-fill {selectedRole === 'driver' ? 'Customer' : selectedRole === 'owner' ? 'Owner' : 'Super Admin'} Demo Credentials
+        {/* Autofill Demo Helper Button for Active Selected Role (Signin Only) */}
+        {mode === 'signin' && (
+          <div className="mb-2 sm:mb-3.5">
+            <span className="text-[10px] text-slate-400 font-semibold block mb-0.5 sm:mb-1 text-center tracking-wide">
+              testing accounts
             </span>
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => handleSelectRole(selectedRole)}
+              className={`w-full py-1 sm:py-1.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl border text-[10px] sm:text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                selectedRole === 'driver'
+                  ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  : selectedRole === 'owner'
+                  ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30'
+                  : 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/30'
+              }`}
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>
+                Auto-fill {selectedRole === 'driver' ? 'Customer' : selectedRole === 'owner' ? 'Owner' : 'Super Admin'} Demo Credentials
+              </span>
+            </button>
+          </div>
+        )}
 
-        {/* Admin notice indicator if admin email is typed */}
-        {email.toLowerCase().includes('admin') && (
-          <div className="mb-4 p-2.5 rounded-xl bg-purple-950/60 border border-purple-500/40 text-purple-300 text-xs flex items-center gap-2 animate-in fade-in">
-            <Shield className="w-4 h-4 text-purple-400 shrink-0" />
+        {/* Admin notice indicator if admin email is typed in signin */}
+        {mode === 'signin' && email.toLowerCase().includes('admin') && (
+          <div className="mb-2 sm:mb-3 p-2 rounded-lg sm:rounded-xl bg-purple-950/60 border border-purple-500/40 text-purple-300 text-[11px] sm:text-xs flex items-center gap-2 animate-in fade-in">
+            <Shield className="w-3.5 h-3.5 text-purple-400 shrink-0" />
             <span className="leading-tight">
               <strong>Admin ID detected:</strong> Logging in will open the Platform Admin Operations Console.
             </span>
@@ -242,98 +297,98 @@ export const LoginPage: React.FC = () => {
 
         {/* Feedback Alerts */}
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+          <div className="mb-2 sm:mb-3 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 text-[11px] sm:text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="mb-2 sm:mb-3 p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-[11px] sm:text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
 
         {/* Authentication Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-1.5 sm:space-y-3">
           {mode === 'signup' && (
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Full Name</label>
+              <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-0.5">Full Name</label>
               <div className="relative">
-                <UserIcon className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Rahul Sen"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">Email / Username</label>
+            <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-0.5">Email / Username</label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="driver@parkshare.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
+                placeholder={mode === 'signup' ? 'name@example.com' : 'driver@parkshare.com'}
+                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
               />
             </div>
           </div>
 
           {mode === 'signup' && (
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">Phone Number (Optional)</label>
+              <label className="text-[10px] sm:text-xs font-semibold text-slate-300 block mb-0.5">Phone Number (Optional)</label>
               <div className="relative">
-                <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98300 00000"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-semibold text-slate-300">Password</label>
+            <div className="flex items-center justify-between mb-0.5">
+              <label className="text-[10px] sm:text-xs font-semibold text-slate-300">Password</label>
               {mode === 'signin' && (
                 <button
                   type="button"
                   onClick={() => alert('For demo, use password: password123')}
-                  className="text-[11px] text-emerald-400 hover:underline"
+                  className="text-[10px] sm:text-[11px] text-emerald-400 hover:underline"
                 >
                   Forgot password?
                 </button>
               )}
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
+                placeholder={mode === 'signup' ? 'Create a strong password' : '••••••••••••'}
+                className="w-full pl-8 sm:pl-10 pr-9 sm:pr-10 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500 transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1"
+                className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
               </button>
             </div>
           </div>
@@ -341,24 +396,24 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+            className="w-full py-2 sm:py-3 px-3 sm:px-4 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 shadow-md sm:shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer mt-1.5 sm:mt-2.5 disabled:opacity-50"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
                 <span>{mode === 'signin' ? 'Sign In to ParkShare' : 'Create Account & Continue'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </>
             )}
           </button>
         </form>
 
         {/* Switch mode footer */}
-        <div className="mt-6 pt-5 border-t border-slate-800 text-center text-xs text-slate-400">
-          {selectedRole === 'admin' ? (
+        <div className="mt-2.5 sm:mt-5 pt-2 sm:pt-3.5 border-t border-slate-800 text-center text-[10px] sm:text-xs text-slate-400">
+          {mode === 'signin' && selectedRole === 'admin' ? (
             <p className="text-slate-400 flex items-center justify-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-purple-400" />
+              <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400" />
               <span>Admin credentials are provisioned by Security Operations.</span>
             </p>
           ) : mode === 'signin' ? (
@@ -368,6 +423,11 @@ export const LoginPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setMode('signup');
+                  setEmail('');
+                  setPassword('');
+                  setName('');
+                  setPhone('');
+                  setSelectedRole((prev) => (prev === 'admin' ? 'driver' : prev));
                   setErrorMsg(null);
                   setSuccessMsg(null);
                 }}
@@ -383,6 +443,10 @@ export const LoginPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setMode('signin');
+                  const targetRole = selectedRole === 'admin' ? 'driver' : selectedRole;
+                  setSelectedRole(targetRole);
+                  setEmail(targetRole === 'owner' ? 'owner@parkshare.com' : 'driver@parkshare.com');
+                  setPassword('password123');
                   setErrorMsg(null);
                   setSuccessMsg(null);
                 }}
@@ -396,9 +460,9 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Standalone Minimal Footer */}
-      <footer className="mt-6 text-center text-xs text-slate-500 z-10 space-y-1">
+      <footer className="mt-1 sm:mt-4 text-center text-[10px] sm:text-xs text-slate-500 z-10 shrink-0 space-y-0.5">
         <p>© {new Date().getFullYear()} ParkShare Technologies Inc. All rights reserved.</p>
-        <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500">
+        <div className="flex items-center justify-center gap-3 text-[10px] sm:text-[11px] text-slate-500">
           <Link to="/" className="hover:text-slate-400">Home</Link>
           <span>•</span>
           <Link to="/find" className="hover:text-slate-400">Find Parking</Link>

@@ -23,7 +23,7 @@ export const register = (req: Request, res: Response): void => {
     name,
     email,
     password,
-    role: role as 'driver' | 'owner',
+    role: role === 'owner' ? 'owner' : 'driver',
     phone: phone || '+91 98300 00000',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     memberSince: 'Just now',

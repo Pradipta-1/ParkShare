@@ -359,15 +359,18 @@ export const Navbar: React.FC = () => {
             ) : (
               <div className="flex items-center gap-2">
                 <Link
-                  to="/login"
-                  className={`px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                    isDark ? 'text-slate-200 hover:text-white' : 'text-slate-700 hover:text-slate-950'
+                  to="/login?mode=signin"
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${
+                    isDark ? 'text-slate-200 hover:text-white hover:bg-slate-800/60' : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                 >
-                  Log in
+                  <span>Log in</span>
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    Testing accounts
+                  </span>
                 </Link>
                 <Link
-                  to="/login"
+                  to="/login?mode=signup"
                   className="px-4 py-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition-all shadow-md shadow-emerald-500/20"
                 >
                   Sign up
