@@ -3,10 +3,33 @@ import { v4 as uuidv4 } from 'uuid';
 import { dbStore } from '../store/dbStore.js';
 import { AuthenticatedRequest } from '../middleware/authMiddleware.js';
 import { Review, ParkingSpace } from '../models/types.js';
+import { ReviewModel, ParkingSpaceModel } from '../models/mongooseModels.js';
 
-export const getReviewsByParkingId = (req: Request, res: Response): void => {
+export const getReviewsByParkingId = async (req: Request, res: Response): Promise<void> => {
   const { parkingId } = req.params;
-  const reviews = dbStore.reviews.filter((r) => r.parkingId === parkingId);
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('reviews');
+    await dbStore.syncCollection('parkingSpaces');
+  }
+
+  const parking = dbStore.parkingSpaces.find(
+    (p) =>
+      p.id === parkingId ||
+      p.id?.toLowerCase() === parkingId?.toLowerCase() ||
+      (p.title && p.title.toLowerCase() === parkingId?.toLowerCase())
+  );
+
+  const reviews = dbStore.reviews.filter(
+    (r) =>
+      r.parkingId === parkingId ||
+      r.parkingId?.toLowerCase() === parkingId?.toLowerCase() ||
+      (parking && (
+        r.parkingId === parking.id ||
+        r.parkingId?.toLowerCase() === parking.id.toLowerCase() ||
+        (parking.title && r.parkingId?.toLowerCase() === parking.title.toLowerCase())
+      ))
+  );
 
   // Calculate rating stats
   const total = reviews.length;
@@ -19,7 +42,7 @@ export const getReviewsByParkingId = (req: Request, res: Response): void => {
     counts[rounded] = (counts[rounded] || 0) + 1;
   });
 
-  const avg = total > 0 ? Number((sum / total).toFixed(1)) : 5.0;
+  const avg = total > 0 ? Number((sum / total).toFixed(1)) : (parking?.rating || 5.0);
 
   const breakdown = [
     { stars: 5, percentage: total > 0 ? Math.round((counts[5] / total) * 100) : 82, count: counts[5] },
@@ -40,7 +63,7 @@ export const getReviewsByParkingId = (req: Request, res: Response): void => {
   });
 };
 
-export const addReview = (req: AuthenticatedRequest, res: Response): void => {
+export const addReview = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const user = req.user;
   if (!user) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -53,43 +76,26 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
     return;
   }
 
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('reviews');
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('bookings');
+  }
+
   const numericRating = Math.min(5, Math.max(1, Number(rating)));
 
-  const existingIndex = dbStore.reviews.findIndex(
-    (r) => (r.parkingId === parkingId || r.parkingId.toLowerCase() === parkingId.toLowerCase()) && r.userId === user.id
-  );
-
-  let newReview: Review;
-  if (existingIndex !== -1) {
-    dbStore.reviews[existingIndex].rating = numericRating;
-    if (comment) dbStore.reviews[existingIndex].comment = comment;
-    dbStore.reviews[existingIndex].date = 'Just now';
-    newReview = dbStore.reviews[existingIndex];
-  } else {
-    newReview = {
-      id: `rev_${uuidv4().substring(0, 8)}`,
-      parkingId,
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatar,
-      rating: numericRating,
-      comment: comment || `Rated ${numericRating} out of 5 stars`,
-      date: 'Just now',
-      createdAt: new Date().toISOString(),
-    };
-  }
-  dbStore.saveReview(newReview);
-
-  // Update parking average rating and review count in dbStore
-  let updatedParking: any = null;
+  // Look up matching parking space
   let parking = dbStore.parkingSpaces.find(
-    (p) => p.id === parkingId || p.id.toLowerCase() === parkingId.toLowerCase()
+    (p) =>
+      p.id === parkingId ||
+      p.id?.toLowerCase() === parkingId?.toLowerCase() ||
+      (p.title && p.title.toLowerCase() === parkingId?.toLowerCase())
   );
 
   // If parking not directly in dbStore.parkingSpaces, check if matching booking exists
   if (!parking) {
     const matchingBooking = dbStore.bookings.find(
-      (b) => b.parkingId === parkingId || b.parkingTitle?.toLowerCase() === parkingId.toLowerCase()
+      (b) => b.parkingId === parkingId || b.parkingTitle?.toLowerCase() === parkingId?.toLowerCase()
     );
     if (matchingBooking) {
       const createdSpace: ParkingSpace = {
@@ -127,17 +133,71 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
     }
   }
 
+  const targetSpaceId = parking ? parking.id : parkingId;
+
+  const existingIndex = dbStore.reviews.findIndex(
+    (r) =>
+      (r.parkingId === targetSpaceId ||
+        r.parkingId === parkingId ||
+        r.parkingId?.toLowerCase() === targetSpaceId.toLowerCase() ||
+        (parking && (
+          r.parkingId === parking.id ||
+          r.parkingId?.toLowerCase() === parking.id.toLowerCase() ||
+          (parking.title && r.parkingId?.toLowerCase() === parking.title.toLowerCase())
+        ))) &&
+      (r.userId === user.id || (r.userName && r.userName.toLowerCase() === user.name.toLowerCase()))
+  );
+
+  let newReview: Review;
+  if (existingIndex !== -1) {
+    dbStore.reviews[existingIndex].rating = numericRating;
+    if (comment) dbStore.reviews[existingIndex].comment = comment;
+    dbStore.reviews[existingIndex].date = 'Just now';
+    newReview = dbStore.reviews[existingIndex];
+  } else {
+    newReview = {
+      id: `rev_${uuidv4().substring(0, 8)}`,
+      parkingId: targetSpaceId,
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
+      rating: numericRating,
+      comment: comment || `Rated ${numericRating} out of 5 stars`,
+      date: 'Just now',
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  dbStore.saveReview(newReview);
+  if (dbStore.isMongoConnected) {
+    await ReviewModel.findOneAndUpdate({ id: newReview.id }, newReview, { upsert: true }).catch((e) =>
+      console.error('Mongo saveReview error in addReview:', e.message)
+    );
+  }
+
+  // Update parking average rating and review count
+  let updatedParking: any = null;
   if (parking) {
     const all = dbStore.reviews.filter(
       (r) =>
-        r.parkingId === parking.id ||
-        r.parkingId.toLowerCase() === parking.id.toLowerCase() ||
-        (parking.title && r.parkingId.toLowerCase() === parking.title.toLowerCase())
+        r.parkingId === parking!.id ||
+        r.parkingId?.toLowerCase() === parking!.id.toLowerCase() ||
+        (parking!.title && r.parkingId?.toLowerCase() === parking!.title.toLowerCase()) ||
+        r.parkingId === parkingId ||
+        r.parkingId?.toLowerCase() === parkingId.toLowerCase()
     );
     parking.reviewCount = all.length;
     const sum = all.reduce((acc, curr) => acc + curr.rating, 0);
     parking.rating = Number((sum / all.length).toFixed(1));
     dbStore.saveParkingSpace(parking);
+
+    if (dbStore.isMongoConnected) {
+      await ParkingSpaceModel.findOneAndUpdate(
+        { id: parking.id },
+        { rating: parking.rating, reviewCount: parking.reviewCount },
+        { new: true }
+      ).catch((e) => console.error('Mongo update parking rating error:', e.message));
+    }
     updatedParking = parking;
   }
 
@@ -149,9 +209,13 @@ export const addReview = (req: AuthenticatedRequest, res: Response): void => {
   });
 };
 
-export const respondToReview = (req: AuthenticatedRequest, res: Response): void => {
+export const respondToReview = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   const { responseText } = req.body;
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('reviews');
+  }
 
   const review = dbStore.reviews.find((r) => r.id === id);
   if (!review) {
@@ -161,6 +225,12 @@ export const respondToReview = (req: AuthenticatedRequest, res: Response): void 
 
   review.ownerResponse = responseText;
   dbStore.saveReview(review);
+  if (dbStore.isMongoConnected) {
+    await ReviewModel.findOneAndUpdate({ id: review.id }, { ownerResponse: responseText }).catch((e) =>
+      console.error('Mongo update review response error:', e.message)
+    );
+  }
+
   res.json({
     success: true,
     message: 'Response added to review',

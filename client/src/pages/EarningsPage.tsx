@@ -42,92 +42,36 @@ export const EarningsPage: React.FC = () => {
   const loadPayouts = async () => {
     try {
       const res = await api.getOwnerPayouts();
-      const localBookingsRaw: any[] = JSON.parse(
-        localStorage.getItem('parkshare_custom_bookings') || '[]'
-      );
-      const cancelledIds: string[] = JSON.parse(
-        localStorage.getItem('parkshare_cancelled_booking_ids') || '[]'
-      );
-
-      // Merge any server bookings with local bookings
-      const serverPayouts = (res.success && Array.isArray(res.data)) ? res.data : [];
-      let combined = [...localBookingsRaw];
-
-      const validBookings = combined.filter(
-        (b) =>
-          b.bookingStatus !== 'cancelled' &&
-          !cancelledIds.includes(b.id) &&
-          !(b.bookingCode && cancelledIds.includes(b.bookingCode))
-      );
-
-      const totalEarnings = validBookings.reduce(
-        (sum, b) => sum + (b.subtotal || b.totalAmount || 0),
-        0
-      );
-
-      const paidOut = serverPayouts
-        .filter((p) => p.status === 'completed')
-        .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-      const pendingPayout = Math.max(0, totalEarnings - paidOut);
-
-      // Dynamic trailing 5 months
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const now = new Date();
-      const trailingMonths: { month: string; year: number; monthIdx: number }[] = [];
-      for (let i = 4; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        trailingMonths.push({
-          month: monthNames[d.getMonth()],
-          year: d.getFullYear(),
-          monthIdx: d.getMonth(),
+      if (res.success && res.summary) {
+        setSummary({
+          totalEarnings: Number(res.summary.totalEarnings) || 0,
+          thisMonth: Number(res.summary.thisMonth) || 0,
+          pendingPayout: Number(res.summary.pendingPayout) || 0,
+          paidOut: Number(res.summary.paidOut) || 0,
         });
+
+        if (Array.isArray(res.summary.monthlyGrowth)) {
+          setMonthlyGrowth(res.summary.monthlyGrowth);
+        }
+
+        const serverPayouts = Array.isArray(res.data) ? res.data : [];
+        const serverBookings = Array.isArray(res.summary.bookings) ? res.summary.bookings : [];
+
+        // Live settlement line items from real driver bookings
+        const bookingSettlements = serverBookings.map((b: any) => ({
+          id: b.id || b.transactionId,
+          amount: b.subtotal || b.totalAmount,
+          status: 'completed',
+          date: b.date,
+          method: `${b.parkingTitle} (${b.spotNumber || 'Bay Assigned'}) • ${b.arrivalTime || '02:00 PM'}`,
+          bookingCode: b.bookingCode,
+          customerName: b.userName || 'Verified Driver',
+        }));
+
+        const finalPayouts =
+          bookingSettlements.length > 0 ? bookingSettlements : serverPayouts;
+        setPayouts(finalPayouts);
       }
-
-      const dynamicMonthlyGrowth = trailingMonths.map(({ month, year, monthIdx }) => {
-        const list = validBookings.filter((b) => {
-          const d = new Date(b.date);
-          if (isNaN(d.getTime())) return false;
-          return d.getMonth() === monthIdx && d.getFullYear() === year;
-        });
-        return {
-          month,
-          amount: list.reduce((sum, b) => sum + (b.subtotal || b.totalAmount || 0), 0),
-          bookings: list.length,
-        };
-      });
-
-      const thisMonth =
-        dynamicMonthlyGrowth[dynamicMonthlyGrowth.length - 1]?.amount || totalEarnings;
-
-      setSummary({
-        totalEarnings,
-        thisMonth,
-        pendingPayout,
-        paidOut,
-      });
-
-      if (dynamicMonthlyGrowth.some((m) => m.amount > 0)) {
-        setMonthlyGrowth(dynamicMonthlyGrowth);
-      } else if (res.summary?.monthlyGrowth) {
-        setMonthlyGrowth(res.summary.monthlyGrowth);
-      } else {
-        setMonthlyGrowth(dynamicMonthlyGrowth);
-      }
-
-      // Live settlement line items from real driver bookings
-      const bookingSettlements = validBookings.map((b) => ({
-        id: b.id || b.transactionId,
-        amount: b.subtotal || b.totalAmount,
-        status: 'completed',
-        date: b.date,
-        method: `${b.parkingTitle} (${b.spotNumber || 'Bay Assigned'}) • ${b.arrivalTime || '02:00 PM'}`,
-        bookingCode: b.bookingCode,
-      }));
-
-      const finalPayouts =
-        bookingSettlements.length > 0 ? bookingSettlements : serverPayouts;
-      setPayouts(finalPayouts);
     } catch {
       // Offline fallback
       try {
@@ -154,12 +98,18 @@ export const EarningsPage: React.FC = () => {
     window.addEventListener('parkshare_space_created', handleSync);
     window.addEventListener('parkshare_spots_updated', handleSync);
     window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+
+    const interval = setInterval(loadPayouts, 4000);
+
     return () => {
       window.removeEventListener('parkshare_booking_created', handleSync);
       window.removeEventListener('parkshare_booking_cancelled', handleSync);
       window.removeEventListener('parkshare_space_created', handleSync);
       window.removeEventListener('parkshare_spots_updated', handleSync);
       window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+      clearInterval(interval);
     };
   }, []);
 

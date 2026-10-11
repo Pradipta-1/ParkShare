@@ -112,6 +112,21 @@ export const ParkingDetailPage: React.FC = () => {
       }
     };
     loadDetails();
+
+    const handleSync = () => {
+      loadDetails();
+    };
+    window.addEventListener('parkshare_rating_updated', handleSync);
+    window.addEventListener('parkshare_spots_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+
+    return () => {
+      window.removeEventListener('parkshare_rating_updated', handleSync);
+      window.removeEventListener('parkshare_spots_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+    };
   }, [id]);
 
   if (notFound) {
@@ -159,8 +174,29 @@ export const ParkingDetailPage: React.FC = () => {
     try {
       const res = await api.addReview(parking.id, newRating, newComment);
       if (res.success) {
-        setReviews([res.data, ...reviews]);
+        if (res.parking) {
+          setParking(res.parking);
+        }
+        const revRes = await api.getReviews(parking.id);
+        if (revRes.success) {
+          setReviews(revRes.data);
+          setReviewStats(revRes.stats);
+        } else {
+          setReviews([res.data, ...reviews]);
+        }
         setNewComment('');
+
+        window.dispatchEvent(
+          new CustomEvent('parkshare_rating_updated', {
+            detail: {
+              parkingId: parking.id,
+              parkingTitle: parking.title,
+              rating: newRating,
+              comment: newComment,
+            },
+          })
+        );
+        window.dispatchEvent(new Event('parkshare_spots_updated'));
       }
     } catch {
       // Ignore

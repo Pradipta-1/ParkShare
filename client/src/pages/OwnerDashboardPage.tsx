@@ -190,8 +190,8 @@ export const OwnerDashboardPage: React.FC = () => {
         const total = space.totalSpots || 1;
         const avail = Math.max(0, total - occupied);
         const customRating = ratingMap.get(space.id);
-        const finalRating = customRating?.rating !== undefined ? customRating.rating : (space.rating ?? 5.0);
-        const finalReviews = customRating?.reviewCount !== undefined ? customRating.reviewCount : (space.reviewCount ?? 0);
+        const finalRating = space.rating !== undefined ? space.rating : (customRating?.rating ?? 5.0);
+        const finalReviews = space.reviewCount !== undefined ? space.reviewCount : (customRating?.reviewCount ?? 0);
         return {
           ...space,
           availableSpots: avail,
@@ -343,6 +343,7 @@ export const OwnerDashboardPage: React.FC = () => {
     window.addEventListener('parkshare_spots_updated', handleSync);
     window.addEventListener('parkshare_rating_updated', handleSync);
     window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
     return () => {
       window.removeEventListener('parkshare_booking_created', handleSync);
       window.removeEventListener('parkshare_booking_cancelled', handleSync);
@@ -350,6 +351,7 @@ export const OwnerDashboardPage: React.FC = () => {
       window.removeEventListener('parkshare_spots_updated', handleSync);
       window.removeEventListener('parkshare_rating_updated', handleSync);
       window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
     };
   }, []);
 

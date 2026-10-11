@@ -221,14 +221,11 @@ export const FindParkingPage: React.FC = () => {
         try {
           const stored = JSON.parse(localStorage.getItem('parkshare_custom_spaces') || '[]');
           if (Array.isArray(stored) && stored.length > 0) {
-            const ratingMap = new Map(stored.map((s: any) => [s.id, { rating: s.rating, reviewCount: s.reviewCount }]));
-            spacesList = spacesList.map((space) => {
-              const custom = ratingMap.get(space.id);
-              if (custom && custom.rating !== undefined) {
-                return { ...space, rating: custom.rating, reviewCount: custom.reviewCount ?? space.reviewCount };
-              }
-              return space;
-            });
+            const serverIds = new Set(spacesList.map((s) => s.id));
+            const offlineOnly = stored.filter((s: any) => !serverIds.has(s.id));
+            if (offlineOnly.length > 0) {
+              spacesList = [...spacesList, ...offlineOnly];
+            }
           }
         } catch {}
 
@@ -278,10 +275,12 @@ export const FindParkingPage: React.FC = () => {
     window.addEventListener('parkshare_rating_updated', handleRatingSync);
     window.addEventListener('parkshare_spots_updated', handleRatingSync);
     window.addEventListener('storage', handleRatingSync);
+    window.addEventListener('focus', handleRatingSync);
     return () => {
       window.removeEventListener('parkshare_rating_updated', handleRatingSync);
       window.removeEventListener('parkshare_spots_updated', handleRatingSync);
       window.removeEventListener('storage', handleRatingSync);
+      window.removeEventListener('focus', handleRatingSync);
     };
   }, [fetchSpaces]);
 

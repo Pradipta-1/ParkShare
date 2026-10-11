@@ -6,6 +6,18 @@ import { PayoutItem } from '../models/types.js';
 
 const reconcileSpaces = () => {
   for (const space of dbStore.parkingSpaces) {
+    const matchingReviews = dbStore.reviews.filter(
+      (r) =>
+        r.parkingId === space.id ||
+        r.parkingId?.toLowerCase() === space.id.toLowerCase() ||
+        (space.title && r.parkingId?.toLowerCase() === space.title.toLowerCase())
+    );
+    if (matchingReviews.length > 0) {
+      space.reviewCount = matchingReviews.length;
+      const sum = matchingReviews.reduce((acc, curr) => acc + curr.rating, 0);
+      space.rating = Number((sum / matchingReviews.length).toFixed(1));
+    }
+
     const activeBookings = dbStore.bookings.filter(
       (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
     );
@@ -21,7 +33,13 @@ const reconcileSpaces = () => {
   }
 };
 
-export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void => {
+export const getOwnerMetrics = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('bookings');
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('payouts');
+    await dbStore.syncCollection('reviews');
+  }
   reconcileSpaces();
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
@@ -188,12 +206,19 @@ export const getOwnerMetrics = (req: AuthenticatedRequest, res: Response): void 
   });
 };
 
-export const getOwnerSpaces = (req: AuthenticatedRequest, res: Response): void => {
+export const getOwnerSpaces = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('bookings');
+    await dbStore.syncCollection('reviews');
+  }
   reconcileSpaces();
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
-  const spaces = dbStore.parkingSpaces.filter((p) => p.ownerId === ownerId);
+  const spaces = dbStore.parkingSpaces.filter(
+    (p) => p.ownerId === ownerId || p.ownerId === 'usr_owner_1' || !p.ownerId
+  );
   res.json({
     success: true,
     count: spaces.length,
@@ -238,7 +263,13 @@ export const updateCalendar = (req: AuthenticatedRequest, res: Response): void =
   });
 };
 
-export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void => {
+export const getOwnerPayouts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('bookings');
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('payouts');
+  }
+
   const user = req.user;
   const ownerId = (user && user.role === 'owner') ? user.id : 'usr_owner_1';
 
@@ -296,6 +327,7 @@ export const getOwnerPayouts = (req: AuthenticatedRequest, res: Response): void 
       pendingPayout,
       paidOut,
       monthlyGrowth,
+      bookings: validBookings,
     },
   });
 };

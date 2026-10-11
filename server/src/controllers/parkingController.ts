@@ -22,10 +22,23 @@ export const getParkingList = async (req: Request, res: Response): Promise<void>
   if (dbStore.isMongoConnected) {
     await dbStore.syncCollection('parkingSpaces');
     await dbStore.syncCollection('bookings');
+    await dbStore.syncCollection('reviews');
   }
 
-  // Reconcile space allotments with live booking states
+  // Reconcile space allotments with live booking states and reviews
   for (const space of dbStore.parkingSpaces) {
+    const matchingReviews = dbStore.reviews.filter(
+      (r) =>
+        r.parkingId === space.id ||
+        r.parkingId?.toLowerCase() === space.id.toLowerCase() ||
+        (space.title && r.parkingId?.toLowerCase() === space.title.toLowerCase())
+    );
+    if (matchingReviews.length > 0) {
+      space.reviewCount = matchingReviews.length;
+      const sum = matchingReviews.reduce((acc, curr) => acc + curr.rating, 0);
+      space.rating = Number((sum / matchingReviews.length).toFixed(1));
+    }
+
     const activeBookings = dbStore.bookings.filter(
       (b) => b.parkingId === space.id && (b.bookingStatus === 'active' || b.bookingStatus === 'confirmed')
     );
@@ -132,13 +145,38 @@ export const getParkingList = async (req: Request, res: Response): Promise<void>
   });
 };
 
-export const getParkingById = (req: Request, res: Response): void => {
+export const getParkingById = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const parking = dbStore.parkingSpaces.find((p) => p.id === id);
+
+  if (dbStore.isMongoConnected) {
+    await dbStore.syncCollection('parkingSpaces');
+    await dbStore.syncCollection('reviews');
+    await dbStore.syncCollection('bookings');
+  }
+
+  const parking = dbStore.parkingSpaces.find(
+    (p) =>
+      p.id === id ||
+      p.id?.toLowerCase() === id?.toLowerCase() ||
+      (p.title && p.title.toLowerCase() === id?.toLowerCase())
+  );
 
   if (!parking) {
     res.status(404).json({ success: false, message: 'Parking space not found' });
     return;
+  }
+
+  // Reconcile reviews and rating live
+  const matchingReviews = dbStore.reviews.filter(
+    (r) =>
+      r.parkingId === parking.id ||
+      r.parkingId?.toLowerCase() === parking.id.toLowerCase() ||
+      (parking.title && r.parkingId?.toLowerCase() === parking.title.toLowerCase())
+  );
+  if (matchingReviews.length > 0) {
+    parking.reviewCount = matchingReviews.length;
+    const sum = matchingReviews.reduce((acc, curr) => acc + curr.rating, 0);
+    parking.rating = Number((sum / matchingReviews.length).toFixed(1));
   }
 
   res.json({
