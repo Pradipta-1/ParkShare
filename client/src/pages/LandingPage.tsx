@@ -106,30 +106,30 @@ export const LandingPage: React.FC = () => {
   return (
     <div className={`flex flex-col min-h-screen transition-colors duration-200 ${isDark ? 'bg-[#0b0f17] text-white' : 'bg-slate-50 text-slate-900'}`}>
       {/* 1. HERO STARTER SECTION: HOW PARKSHARE WORKS & ACCOUNT SIGN IN PROMPT */}
-      <section className={`relative pt-10 pb-16 lg:pt-16 lg:pb-20 overflow-hidden border-b transition-colors ${isDark ? 'border-slate-800/80 bg-[#0b0f17]' : 'border-slate-200 bg-white'}`}>
+      <section className={`relative pt-8 sm:pt-12 lg:pt-16 pb-12 sm:pb-16 lg:pb-20 overflow-hidden border-b transition-colors ${isDark ? 'border-slate-800/80 bg-[#0b0f17]' : 'border-slate-200 bg-white'}`}>
         {/* Ambient lighting glows */}
-        <div className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[450px] blur-[140px] rounded-full pointer-events-none -z-10 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-500/5'}`} />
-        <div className={`absolute top-1/2 right-10 w-[400px] h-[400px] blur-[130px] rounded-full pointer-events-none -z-10 ${isDark ? 'bg-purple-500/10' : 'bg-purple-500/5'}`} />
+        <div className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[450px] blur-[140px] rounded-full pointer-events-none -z-10 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-500/12'}`} />
+        <div className={`absolute top-1/2 right-10 w-[400px] h-[400px] blur-[130px] rounded-full pointer-events-none -z-10 ${isDark ? 'bg-purple-500/10' : 'bg-purple-500/10'}`} />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto space-y-4 mb-10">
-            <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs shadow-xs transition-colors ${
-              isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+          <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-10">
+            <div className={`inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full border text-[11px] sm:text-xs shadow-xs transition-colors ${
+              isDark ? 'bg-slate-900 border-slate-800 text-slate-300' : 'bg-white/95 border-slate-200/90 text-slate-700 shadow-xs backdrop-blur-sm'
             }`}>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
               <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>How ParkShare Works</span>
-              <span className={isDark ? 'text-slate-500' : 'text-slate-400'}>•</span>
+              <span className={`hidden sm:inline ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>•</span>
               <span className="text-emerald-500 font-bold">Smart P2P Mobility Platform</span>
             </div>
 
-            <h1 className={`text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] sm:leading-[1.1] ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`text-2xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.2] sm:leading-[1.1] ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Effortless Parking Discovery <br className="hidden sm:inline" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500">
                 & Space Sharing Made Simple.
               </span>
             </h1>
 
-            <p className={`text-sm sm:text-lg font-normal leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <p className={`text-xs sm:text-base lg:text-lg font-normal leading-relaxed max-w-2xl mx-auto px-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Find, reserve, and share parking spots with guaranteed entry. Connect drivers needing safe spaces with hosts monetizing empty driveways and garages.
             </p>
           </div>
@@ -138,7 +138,7 @@ export const LandingPage: React.FC = () => {
           <div className={`max-w-4xl mx-auto mb-8 sm:mb-12 p-4 sm:p-8 rounded-2xl sm:rounded-3xl backdrop-blur-2xl border shadow-2xl relative overflow-hidden transition-all ${
             isDark
               ? 'bg-gradient-to-b from-slate-900/90 to-slate-950/90 border-emerald-500/30 shadow-emerald-950/20'
-              : 'bg-white border-emerald-500/30 shadow-slate-900/10 ring-1 ring-slate-200/80'
+              : 'bg-gradient-to-b from-white via-white to-slate-50/80 border-emerald-500/30 shadow-xl shadow-slate-200/70 ring-1 ring-emerald-500/10'
           }`}>
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -178,28 +178,28 @@ export const LandingPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => navigate('/login')}
-                      className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-xl ${
+                      className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-xl ${
                         isDark
                           ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
                           : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
                       }`}
                     >
-                      <LogIn className="w-4 h-4 stroke-[2.5]" />
+                      <LogIn className="w-4 h-4 stroke-[2.5] shrink-0" />
                       <span>Log In / Sign In</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-950/20 text-slate-950 border border-slate-950/15">
+                      <span className="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-950/20 text-slate-950 border border-slate-950/15 whitespace-nowrap">
                         Testing accounts
                       </span>
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate('/login?mode=signup')}
-                      className={`w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm border-2 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
+                      className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm border-2 transition-all hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
                         isDark
                           ? 'bg-slate-800/80 hover:bg-slate-800 text-white border-slate-700/80'
                           : 'bg-white hover:bg-slate-50 text-slate-900 border-slate-300'
                       }`}
                     >
-                      <UserPlus className="w-4 h-4 stroke-[2.5]" />
+                      <UserPlus className="w-4 h-4 stroke-[2.5] shrink-0" />
                       <span>Create Account</span>
                     </button>
                   </>
@@ -215,7 +215,7 @@ export const LandingPage: React.FC = () => {
                 className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between ${
                   isDark
                     ? 'bg-slate-950/70 border-slate-800/80 hover:border-emerald-500/50 hover:bg-slate-900'
-                    : 'bg-slate-50 border-slate-200 hover:border-emerald-500/50 hover:bg-slate-100/80 shadow-xs'
+                    : 'bg-white border-slate-200/90 hover:border-emerald-500/50 hover:bg-emerald-50/20 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
                 }`}
               >
                 <div>
@@ -243,7 +243,7 @@ export const LandingPage: React.FC = () => {
                 className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between ${
                   isDark
                     ? 'bg-slate-950/70 border-slate-800/80 hover:border-blue-500/50 hover:bg-slate-900'
-                    : 'bg-slate-50 border-slate-200 hover:border-blue-500/50 hover:bg-slate-100/80 shadow-xs'
+                    : 'bg-white border-slate-200/90 hover:border-blue-500/50 hover:bg-blue-50/20 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
                 }`}
               >
                 <div>
@@ -271,7 +271,7 @@ export const LandingPage: React.FC = () => {
                 className={`p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group flex flex-col justify-between ${
                   isDark
                     ? 'bg-slate-950/70 border-slate-800/80 hover:border-purple-500/50 hover:bg-slate-900'
-                    : 'bg-slate-50 border-slate-200 hover:border-purple-500/50 hover:bg-slate-100/80 shadow-xs'
+                    : 'bg-white border-slate-200/90 hover:border-purple-500/50 hover:bg-purple-50/20 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
                 }`}
               >
                 <div>
@@ -298,8 +298,9 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* 2. THE CORE "HOW IT WORKS" EXPERIENCE (CENTERPIECE OF THE HOMEPAGE) */}
-      <section id="how-it-works" className={`py-10 sm:py-16 lg:py-24 border-b transition-colors relative ${isDark ? 'bg-[#080d17] border-slate-800/80' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="how-it-works" className={`py-10 sm:py-16 lg:py-24 border-b transition-colors relative overflow-hidden ${isDark ? 'bg-[#080d17] border-slate-800/80' : 'bg-slate-50/70 border-slate-200/90'}`}>
+        <div className={`absolute top-1/3 left-10 w-[500px] h-[350px] blur-[140px] rounded-full pointer-events-none -z-10 ${isDark ? 'bg-blue-500/5' : 'bg-emerald-500/8'}`} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
             <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-500">
               Interactive Platform Guide
@@ -312,18 +313,16 @@ export const LandingPage: React.FC = () => {
             </p>
 
             {/* Persona Switcher Tabs */}
-            <div className={`grid grid-cols-2 sm:inline-flex p-1 rounded-xl sm:rounded-2xl mt-5 sm:mt-6 shadow-inner w-full sm:w-auto max-w-md mx-auto border transition-colors ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/80 border-slate-300'
+            <div className={`grid grid-cols-2 sm:inline-flex p-1 rounded-xl sm:rounded-2xl mt-5 sm:mt-6 w-full sm:w-auto max-w-md mx-auto border transition-colors ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200/70 border-slate-300/80 shadow-inner'
             }`}>
               <button
                 type="button"
                 onClick={() => setActivePersonaTab('driver')}
                 className={`px-3 sm:px-5 py-2.5 sm:py-2 rounded-lg sm:rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                   activePersonaTab === 'driver'
-                    ? isDark
-                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                      : 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-700 hover:text-slate-950 hover:bg-white/60 font-bold'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/25'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-700 hover:text-slate-950 hover:bg-white/80 font-bold'
                 }`}
               >
                 <Car className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
@@ -338,7 +337,7 @@ export const LandingPage: React.FC = () => {
                     ? isDark
                       ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
                       : 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-700 hover:text-slate-950 hover:bg-white/60 font-bold'
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-slate-700 hover:text-slate-950 hover:bg-white/80 font-bold'
                 }`}
               >
                 <Building className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
@@ -353,14 +352,14 @@ export const LandingPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 sm:gap-6">
               {/* Step 1 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200/90 hover:border-emerald-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-emerald-500 bg-emerald-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     01
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-slate-100 group-hover:bg-emerald-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-emerald-50/80 border border-emerald-100 group-hover:bg-emerald-100/80'
                   }`}>
                     <Search className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -375,14 +374,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 2 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200/90 hover:border-blue-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-blue-500 bg-blue-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     02
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-blue-500/20' : 'bg-slate-100 group-hover:bg-blue-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-blue-500/20' : 'bg-blue-50/80 border border-blue-100 group-hover:bg-blue-100/80'
                   }`}>
                     <Compass className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -397,14 +396,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 3 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200/90 hover:border-purple-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-purple-500 bg-purple-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     03
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-purple-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-purple-500/20' : 'bg-slate-100 group-hover:bg-purple-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-purple-500/20' : 'bg-purple-50/80 border border-purple-100 group-hover:bg-purple-100/80'
                   }`}>
                     <Lock className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -419,14 +418,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 4 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200/90 hover:border-amber-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-amber-500 bg-amber-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     04
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-amber-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-amber-500/20' : 'bg-slate-100 group-hover:bg-amber-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-amber-500/20' : 'bg-amber-50/80 border border-amber-100 group-hover:bg-amber-100/80'
                   }`}>
                     <QrCode className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -441,14 +440,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 5 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200 hover:border-emerald-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-emerald-500/50' : 'bg-white border-slate-200/90 hover:border-teal-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-teal-500 bg-teal-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     05
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-teal-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-teal-500/20' : 'bg-slate-100 group-hover:bg-teal-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-teal-500/20' : 'bg-teal-50/80 border border-teal-100 group-hover:bg-teal-100/80'
                   }`}>
                     <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -468,14 +467,14 @@ export const LandingPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 sm:gap-6">
               {/* Step 1 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200/90 hover:border-blue-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-blue-500 bg-blue-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     01
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-blue-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-blue-500/20' : 'bg-slate-100 group-hover:bg-blue-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-blue-500/20' : 'bg-blue-50/80 border border-blue-100 group-hover:bg-blue-100/80'
                   }`}>
                     <Building className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -490,14 +489,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 2 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200/90 hover:border-emerald-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-emerald-500 bg-emerald-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     02
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-slate-100 group-hover:bg-emerald-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-emerald-50/80 border border-emerald-100 group-hover:bg-emerald-100/80'
                   }`}>
                     <Shield className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -512,14 +511,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 3 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200/90 hover:border-purple-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-purple-500 bg-purple-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     03
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-purple-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-purple-500/20' : 'bg-slate-100 group-hover:bg-purple-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-purple-500/20' : 'bg-purple-50/80 border border-purple-100 group-hover:bg-purple-100/80'
                   }`}>
                     <Calendar className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -534,14 +533,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 4 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200/90 hover:border-amber-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-amber-500 bg-amber-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     04
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-amber-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-amber-500/20' : 'bg-slate-100 group-hover:bg-amber-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-amber-500/20' : 'bg-amber-50/80 border border-amber-100 group-hover:bg-amber-100/80'
                   }`}>
                     <QrCode className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -556,14 +555,14 @@ export const LandingPage: React.FC = () => {
 
               {/* Step 5 */}
               <div className={`p-3.5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left sm:text-center flex sm:flex-col items-start sm:items-center gap-3.5 sm:gap-0 group ${
-                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200 hover:border-blue-500/50 shadow-xs'
+                isDark ? 'bg-slate-900/80 border-slate-800 hover:border-blue-500/50' : 'bg-white border-slate-200/90 hover:border-emerald-500/60 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
               }`}>
                 <div className="flex sm:flex-col items-center gap-2 sm:gap-0 shrink-0">
                   <span className="text-[10px] sm:text-xs font-mono font-black text-emerald-500 bg-emerald-500/10 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full sm:mb-3">
                     05
                   </span>
                   <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-emerald-500 sm:mb-3.5 transition-colors ${
-                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-slate-100 group-hover:bg-emerald-100'
+                    isDark ? 'bg-slate-800/80 group-hover:bg-emerald-500/20' : 'bg-emerald-50/80 border border-emerald-100 group-hover:bg-emerald-100/80'
                   }`}>
                     <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                   </div>
@@ -580,7 +579,7 @@ export const LandingPage: React.FC = () => {
 
           {/* Prompt in How It Works Section to Redirect to Sign In */}
           <div className={`mt-8 sm:mt-12 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5 sm:gap-4 transition-all ${
-            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200/90 shadow-sm'
           }`}>
             <div className="flex items-center gap-3 text-left">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
@@ -620,7 +619,7 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border shadow-xl transition-all ${
-                isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200 shadow-sm'
+                isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200/90 shadow-xl shadow-slate-200/70'
               }`}>
                 <form onSubmit={handleSearchSubmit} className="space-y-3 sm:space-y-3.5">
                   <div>
@@ -628,7 +627,7 @@ export const LandingPage: React.FC = () => {
                       Target Destination
                     </label>
                     <div className={`flex items-center gap-2 px-3 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl border focus-within:border-emerald-500 transition-colors mt-1 ${
-                      isDark ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-300'
+                      isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50/80 border-slate-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/10'
                     }`}>
                       <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
                       <input
@@ -649,7 +648,7 @@ export const LandingPage: React.FC = () => {
                         Arrival Time
                       </label>
                       <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl sm:rounded-2xl border text-xs mt-1 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50/80 border-slate-200 text-slate-900 focus-within:bg-white focus-within:border-emerald-500'
                       }`}>
                         <Clock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <select
@@ -669,7 +668,7 @@ export const LandingPage: React.FC = () => {
                         Departure Time
                       </label>
                       <div className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl sm:rounded-2xl border text-xs mt-1 ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-300 text-slate-900'
+                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50/80 border-slate-200 text-slate-900 focus-within:bg-white focus-within:border-emerald-500'
                       }`}>
                         <Clock className="w-3.5 h-3.5 text-purple-500 shrink-0" />
                         <select
@@ -712,7 +711,7 @@ export const LandingPage: React.FC = () => {
             {/* Map on Right */}
             <div className="lg:col-span-7 relative">
               <div className={`relative h-[320px] sm:h-[440px] w-full rounded-2xl sm:rounded-3xl overflow-hidden border shadow-2xl transition-all ${
-                isDark ? 'border-slate-800' : 'border-slate-200'
+                isDark ? 'border-slate-800' : 'border-slate-200/90 shadow-xl shadow-slate-200/70'
               }`}>
                 <LeafletMap
                   spaces={parkingList}
@@ -788,7 +787,7 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* 4. FEATURED DESTINATIONS */}
-      <section className={`py-10 sm:py-14 border-b transition-colors ${isDark ? 'bg-[#090d15] border-slate-800/80' : 'bg-slate-50 border-slate-200'}`}>
+      <section className={`py-10 sm:py-14 border-b transition-colors ${isDark ? 'bg-[#090d15] border-slate-800/80' : 'bg-slate-50/70 border-slate-200/90'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 sm:mb-8 gap-3 sm:gap-4">
             <div>
@@ -831,7 +830,7 @@ export const LandingPage: React.FC = () => {
                   className={`p-3 sm:p-5 rounded-xl sm:rounded-2xl border transition-all cursor-pointer group ${
                     isDark
                       ? 'bg-slate-900/60 hover:bg-slate-900 border-slate-800 hover:border-slate-700'
-                      : 'bg-white hover:bg-slate-100/80 border-slate-200 hover:border-slate-300 shadow-xs'
+                      : 'bg-white hover:bg-slate-50/90 border-slate-200/90 hover:border-emerald-500/40 shadow-xs hover:shadow-md hover:shadow-slate-200/60'
                   }`}
                 >
                   <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${cat.color}`}>

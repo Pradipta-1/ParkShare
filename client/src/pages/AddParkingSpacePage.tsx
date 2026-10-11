@@ -21,6 +21,7 @@ import { LeafletMap } from '../components/LeafletMap';
 import { ParkingType, VehicleType, Amenity } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const PARKING_TYPES: ParkingType[] = ['Covered', 'Basement', 'Garage', 'Driveway', 'Open'];
 const VEHICLE_OPTIONS: VehicleType[] = ['Car', 'Bike', 'SUV', 'EV'];
@@ -42,6 +43,7 @@ const SAMPLE_PHOTO_PRESETS = [
 ];
 
 export const AddParkingSpacePage: React.FC = () => {
+  const { isDark } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -232,26 +234,32 @@ export const AddParkingSpacePage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/owner')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold transition-all group shadow-sm cursor-pointer shrink-0"
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all group shadow-sm cursor-pointer shrink-0 ${
+              isDark
+                ? 'bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800 hover:border-emerald-500/40'
+                : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-emerald-500/40'
+            }`}
           >
-            <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
+            <ArrowLeft className="w-3.5 h-3.5 text-emerald-500 group-hover:-translate-x-1 transition-transform" />
             <span>Host Overview</span>
           </button>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight truncate">
+            <h1 className={`text-lg sm:text-xl font-extrabold tracking-tight leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>
               List Your Parking Spot
             </h1>
-            <p className="text-xs text-slate-400 hidden sm:block leading-tight mt-0.5">
+            <p className={`text-xs hidden sm:block leading-tight mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Turn unused driveway, bay, or garage into effortless passive income
             </p>
           </div>
         </div>
 
         {/* Wizard Progress Bar */}
-        <div className="w-full sm:w-72 bg-slate-900/70 p-2.5 rounded-2xl border border-slate-800/80 shrink-0 shadow-md">
-          <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-1.5">
+        <div className={`w-full sm:w-72 p-2.5 rounded-2xl border shrink-0 shadow-md ${
+          isDark ? 'bg-slate-900/70 border-slate-800/80' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`flex items-center justify-between text-[11px] font-bold mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             <span>Step {step} of 7</span>
-            <span className="text-emerald-400 font-bold truncate ml-2">
+            <span className="text-emerald-500 font-bold truncate ml-2">
               {step === 1 && '1. Pin Location'}
               {step === 2 && '2. Photos'}
               {step === 3 && '3. Spot Info'}
@@ -261,7 +269,7 @@ export const AddParkingSpacePage: React.FC = () => {
               {step === 7 && '7. Review & Submit'}
             </span>
           </div>
-          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+          <div className={`w-full h-1.5 rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-100'}`}>
             <div
               className="bg-emerald-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${(step / 7) * 100}%` }}
@@ -271,7 +279,9 @@ export const AddParkingSpacePage: React.FC = () => {
       </div>
 
       {/* Wizard Card Container - Full width & expansive, compact on mobile */}
-      <div className="flex-1 bg-[#0f172a] border border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 lg:p-8 shadow-2xl flex flex-col justify-between space-y-3.5 sm:space-y-6">
+      <div className={`flex-1 border rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 lg:p-8 shadow-2xl flex flex-col justify-between space-y-3.5 sm:space-y-6 ${
+        isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'
+      }`}>
         {/* Step 1: Location on Draggable Map (Spacious Desktop, Compact Mobile) */}
         {step === 1 && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-5 lg:gap-8 items-stretch flex-1">
@@ -279,8 +289,8 @@ export const AddParkingSpacePage: React.FC = () => {
             <div className="lg:col-span-5 space-y-2.5 sm:space-y-3.5 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-sm sm:text-base lg:text-lg font-bold text-white flex items-center gap-1.5 sm:gap-2">
-                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
+                  <h2 className={`text-sm sm:text-base lg:text-lg font-bold flex items-center gap-1.5 sm:gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
                     <span>Space Location</span>
                   </h2>
 
@@ -288,7 +298,7 @@ export const AddParkingSpacePage: React.FC = () => {
                     type="button"
                     onClick={handleUseCurrentGPS}
                     disabled={isResolvingAddress}
-                    className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-blue-600/15 border border-blue-500/40 text-blue-400 hover:bg-blue-600/25 text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer shrink-0"
+                    className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-blue-600/15 border border-blue-500/40 text-blue-500 hover:bg-blue-600/25 text-[11px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer shrink-0"
                     title="Fill address with your device GPS"
                   >
                     {isResolvingAddress ? (
@@ -299,14 +309,14 @@ export const AddParkingSpacePage: React.FC = () => {
                     <span>Current GPS</span>
                   </button>
                 </div>
-                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">
+                <p className={`text-[11px] sm:text-xs mt-0.5 sm:mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   Drag pin or click anywhere on the map to set entrance coordinates.
                 </p>
               </div>
 
               {/* Auto-fill feedback indicator */}
               {addressAutoDetected && (
-                <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 animate-in fade-in">
+                <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg sm:rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-[11px] sm:text-xs font-medium flex items-center gap-1.5 sm:gap-2 animate-in fade-in">
                   <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
                   <span>Address automatically filled from map pin!</span>
                 </div>
@@ -315,11 +325,11 @@ export const AddParkingSpacePage: React.FC = () => {
               {/* Auto-detected Parking Name */}
               <div>
                 <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                  <label className="text-[11px] sm:text-xs text-slate-300 font-semibold">
+                  <label className={`text-[11px] sm:text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
                     Parking Name (Road / Landmark)
                   </label>
                   {isResolvingAddress && (
-                    <span className="text-[10px] text-blue-400 flex items-center gap-1">
+                    <span className="text-[10px] text-blue-500 flex items-center gap-1">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" /> Auto-naming...
                     </span>
                   )}
@@ -329,13 +339,17 @@ export const AddParkingSpacePage: React.FC = () => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Park Street Executive Driveway"
-                  className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm outline-none focus:border-emerald-500 font-semibold"
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 font-semibold transition-colors ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white'
+                  }`}
                 />
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-2.5">
                 <div>
-                  <label className="text-[11px] sm:text-xs text-slate-300 block mb-0.5 sm:mb-1">Street Address</label>
+                  <label className={`text-[11px] sm:text-xs block mb-0.5 sm:mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Street Address</label>
                   <input
                     type="text"
                     value={address}
@@ -343,11 +357,15 @@ export const AddParkingSpacePage: React.FC = () => {
                       setAddress(e.target.value);
                       setAddressAutoDetected(false);
                     }}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm outline-none focus:border-emerald-500"
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-colors ${
+                      isDark 
+                        ? 'bg-slate-900 border-slate-800 text-white' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] sm:text-xs text-slate-300 block mb-0.5 sm:mb-1">City</label>
+                  <label className={`text-[11px] sm:text-xs block mb-0.5 sm:mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>City</label>
                   <input
                     type="text"
                     value={city}
@@ -355,20 +373,28 @@ export const AddParkingSpacePage: React.FC = () => {
                       setCity(e.target.value);
                       setAddressAutoDetected(false);
                     }}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm outline-none focus:border-emerald-500"
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border text-xs sm:text-sm outline-none focus:border-emerald-500 transition-colors ${
+                      isDark 
+                        ? 'bg-slate-900 border-slate-800 text-white' 
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                    }`}
                   />
                 </div>
               </div>
 
-              <div className="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t border-slate-800/80">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400" />
+              <div className={`text-[11px] sm:text-xs flex items-center gap-1.5 sm:gap-2 pt-1.5 sm:pt-2 border-t ${
+                isDark ? 'text-slate-400 border-slate-800/80' : 'text-slate-500 border-slate-200'
+              }`}>
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500" />
                 <span>Coordinates: {location.lat.toFixed(4)}, {location.lng.toFixed(4)}</span>
               </div>
             </div>
 
             {/* Right Column: Draggable Map (Compact on Mobile, Spacious on Desktop) */}
             <div className="lg:col-span-7 flex flex-col space-y-1 sm:space-y-2">
-              <div className="h-[180px] sm:h-[340px] lg:h-[480px] min-h-[160px] rounded-xl sm:rounded-2xl overflow-hidden border border-slate-700/80 shadow-inner">
+              <div className={`h-[180px] sm:h-[340px] lg:h-[480px] min-h-[160px] rounded-xl sm:rounded-2xl overflow-hidden border shadow-inner ${
+                isDark ? 'border-slate-700/80' : 'border-slate-200 shadow-sm'
+              }`}>
                 <LeafletMap
                   center={[location.lat, location.lng]}
                   zoom={15}
@@ -378,7 +404,7 @@ export const AddParkingSpacePage: React.FC = () => {
               </div>
               <div className="text-[10px] sm:text-xs text-slate-500 flex items-center justify-between">
                 <span>Tip: Click anywhere on map to reposition pin</span>
-                <span className="hidden sm:inline text-emerald-400 font-mono">Live OpenStreetMap Draggable Pin</span>
+                <span className="hidden sm:inline text-emerald-500 font-mono">Live OpenStreetMap Draggable Pin</span>
               </div>
             </div>
           </div>
@@ -388,11 +414,11 @@ export const AddParkingSpacePage: React.FC = () => {
         {step === 2 && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Camera className="w-5 h-5 text-blue-400" />
+              <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <Camera className="w-5 h-5 text-blue-500" />
                 Add Photos of the Parking Area
               </h2>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Clear photos of the driveway, lighting, and entry gate build high driver confidence.
               </p>
             </div>
@@ -405,7 +431,11 @@ export const AddParkingSpacePage: React.FC = () => {
                     key={i}
                     onClick={() => handleTogglePhoto(photo)}
                     className={`relative h-36 sm:h-52 rounded-2xl overflow-hidden border-2 cursor-pointer transition-all ${
-                      isSelected ? 'border-emerald-500 ring-2 ring-emerald-500/40' : 'border-slate-800 opacity-70 hover:opacity-100'
+                      isSelected 
+                        ? 'border-emerald-500 ring-2 ring-emerald-500/40 shadow-md' 
+                        : isDark 
+                          ? 'border-slate-800 opacity-70 hover:opacity-100' 
+                          : 'border-slate-200 opacity-75 hover:opacity-100'
                     }`}
                   >
                     <img src={photo} alt="" className="w-full h-full object-cover" />
@@ -418,7 +448,7 @@ export const AddParkingSpacePage: React.FC = () => {
                 );
               })}
             </div>
-            <p className="text-xs text-slate-500 text-center">
+            <p className={`text-xs text-center ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
               Selected {selectedPhotos.length} photo(s). Drivers prefer listings with at least 2 distinct angles.
             </p>
           </div>
@@ -427,39 +457,51 @@ export const AddParkingSpacePage: React.FC = () => {
         {/* Step 3: Information */}
         {step === 3 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Info className="w-5 h-5 text-purple-400" />
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <Info className="w-5 h-5 text-purple-500" />
               Spot Title & Category
             </h2>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1">Listing Title</label>
+              <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Listing Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Park Street Executive Gated Driveway"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none focus:border-emerald-500"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none focus:border-emerald-500 transition-colors ${
+                  isDark 
+                    ? 'bg-slate-900 border-slate-800 text-white' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
               />
             </div>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-1">Description</label>
+              <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Description</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none focus:border-emerald-500 resize-none"
+                className={`w-full px-3.5 py-2 rounded-xl border text-xs outline-none focus:border-emerald-500 resize-none transition-colors ${
+                  isDark 
+                    ? 'bg-slate-900 border-slate-800 text-white' 
+                    : 'bg-slate-50 border-slate-300 text-slate-900 focus:bg-white'
+                }`}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Parking Structure</label>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Parking Structure</label>
                 <select
                   value={parkingType}
                   onChange={(e) => setParkingType(e.target.value as ParkingType)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none"
+                  className={`w-full px-3 py-2.5 rounded-xl border text-xs outline-none cursor-pointer ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-white' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 >
                   {PARKING_TYPES.map((t) => (
                     <option key={t} value={t}>{t}</option>
@@ -468,11 +510,15 @@ export const AddParkingSpacePage: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Category Hub</label>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Category Hub</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none"
+                  className={`w-full px-3 py-2.5 rounded-xl border text-xs outline-none cursor-pointer ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-white' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 >
                   {['Downtown', 'Business District', 'Shopping', 'Airport', 'Railway Station', 'Universities'].map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -482,7 +528,7 @@ export const AddParkingSpacePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs text-slate-300 block mb-2">Suitable Vehicle Types</label>
+              <label className={`text-xs block mb-2 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Suitable Vehicle Types</label>
               <div className="grid grid-cols-2 sm:flex gap-2">
                 {VEHICLE_OPTIONS.map((v) => {
                   const active = suitableVehicles.includes(v);
@@ -491,10 +537,12 @@ export const AddParkingSpacePage: React.FC = () => {
                       key={v}
                       type="button"
                       onClick={() => handleToggleVehicle(v)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                      className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                         active
-                          ? 'bg-blue-500/10 border-blue-500 text-blue-400'
-                          : 'bg-slate-900 border-slate-800 text-slate-400'
+                          ? 'bg-blue-500/10 border-blue-500 text-blue-500'
+                          : isDark
+                            ? 'bg-slate-900 border-slate-800 text-slate-400'
+                            : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
                       {v}
@@ -509,11 +557,11 @@ export const AddParkingSpacePage: React.FC = () => {
         {/* Step 4: Amenities */}
         {step === 4 && (
           <div className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
               Facilities & Features
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Highlight security and amenities that drivers value most.
             </p>
 
@@ -525,15 +573,19 @@ export const AddParkingSpacePage: React.FC = () => {
                     key={a}
                     type="button"
                     onClick={() => handleToggleAmenity(a)}
-                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all ${
+                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs text-left transition-all cursor-pointer ${
                       active
-                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-300 font-semibold'
-                        : 'bg-slate-900 border-slate-800 text-slate-400'
+                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500 font-semibold shadow-sm'
+                        : isDark
+                          ? 'bg-slate-900 border-slate-800 text-slate-400'
+                          : 'bg-slate-50 border-slate-200 text-slate-600'
                     }`}
                   >
                     <div
                       className={`w-4 h-4 rounded flex items-center justify-center border text-[10px] ${
-                        active ? 'bg-emerald-500 border-emerald-500 text-black' : 'border-slate-700'
+                        active 
+                          ? 'bg-emerald-500 border-emerald-500 text-slate-950 font-bold' 
+                          : isDark ? 'border-slate-700' : 'border-slate-300'
                       }`}
                     >
                       {active && <Check className="w-3 h-3 stroke-[3]" />}
@@ -549,39 +601,49 @@ export const AddParkingSpacePage: React.FC = () => {
         {/* Step 5: Pricing */}
         {step === 5 && (
           <div className="space-y-5">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <DollarSign className="w-5 h-5 text-emerald-500" />
               Hourly Price & Spot Capacity
             </h2>
 
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Price Per Hour (₹)</label>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Price Per Hour (₹)</label>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-white">₹</span>
+                  <span className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>₹</span>
                   <input
                     type="number"
                     min="15"
                     max="300"
                     value={pricePerHour}
                     onChange={(e) => setPricePerHour(Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-black text-xl outline-none focus:border-emerald-500"
+                    className={`w-full px-3 py-2 rounded-xl border font-black text-xl outline-none focus:border-emerald-500 ${
+                      isDark 
+                        ? 'bg-slate-950 border-slate-800 text-white' 
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
-                <span className="text-[11px] text-slate-500 mt-1 block">
+                <span className={`text-[11px] mt-1 block ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
                   Recommended rate for this neighborhood: ₹40 — ₹60/hour.
                 </span>
               </div>
 
-              <div className="pt-2 border-t border-slate-800">
-                <label className="text-xs text-slate-300 block mb-1">Total Parking Spots</label>
+              <div className={`pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Total Parking Spots</label>
                 <input
                   type="number"
                   min="1"
                   max="50"
                   value={totalSpots}
                   onChange={(e) => setTotalSpots(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-bold text-base outline-none focus:border-emerald-500"
+                  className={`w-full px-3 py-2 rounded-xl border font-bold text-base outline-none focus:border-emerald-500 ${
+                    isDark 
+                      ? 'bg-slate-950 border-slate-800 text-white' 
+                      : 'bg-white border-slate-300 text-slate-900'
+                  }`}
                 />
               </div>
             </div>
@@ -591,33 +653,41 @@ export const AddParkingSpacePage: React.FC = () => {
         {/* Step 6: Availability */}
         {step === 6 && (
           <div className="space-y-5">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-400" />
+            <h2 className={`text-lg font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <Calendar className="w-5 h-5 text-blue-500" />
               Operating Hours
             </h2>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Open Time</label>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Open Time</label>
                 <input
                   type="time"
                   value={operatingHours.open}
                   onChange={(e) => setOperatingHours({ ...operatingHours, open: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none cursor-pointer"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none cursor-pointer ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-white' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-300 block mb-1">Close Time</label>
+                <label className={`text-xs block mb-1 font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Close Time</label>
                 <input
                   type="time"
                   value={operatingHours.close}
                   onChange={(e) => setOperatingHours({ ...operatingHours, close: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs outline-none cursor-pointer"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs outline-none cursor-pointer ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-white' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 />
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300">
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-500 font-medium">
               ✓ Instant automated booking will be enabled during these hours.
             </div>
           </div>
@@ -627,37 +697,43 @@ export const AddParkingSpacePage: React.FC = () => {
         {step === 7 && (
           <div className="space-y-5">
             <div className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white">Preview Your Listing</h2>
+              <Eye className="w-5 h-5 text-emerald-500" />
+              <h2 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Preview Your Listing</h2>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-              <div className="h-44 rounded-xl overflow-hidden">
+            <div className={`p-4 rounded-2xl border space-y-4 ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="h-44 rounded-xl overflow-hidden shadow-sm">
                 <img src={selectedPhotos[0]} alt="" className="w-full h-full object-cover" />
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between items-start">
-                  <h3 className="font-bold text-base text-white">{title}</h3>
-                  <span className="text-lg font-extrabold text-emerald-400">₹{pricePerHour}/hr</span>
+                  <h3 className={`font-bold text-base ${isDark ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+                  <span className="text-lg font-extrabold text-emerald-500">₹{pricePerHour}/hr</span>
                 </div>
-                <p className="text-xs text-slate-400">{address}, {city}</p>
-                <p className="text-xs text-slate-300 pt-1">{description}</p>
+                <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{address}, {city}</p>
+                <p className={`text-xs pt-1 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-800">
-                <span className="px-2 py-0.5 rounded bg-slate-800 text-white text-[11px] font-semibold">
+              <div className={`flex flex-wrap gap-1.5 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                  isDark ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-800'
+                }`}>
                   {parkingType}
                 </span>
                 {amenities.map((a, i) => (
-                  <span key={i} className="px-2 py-0.5 rounded bg-slate-800/60 text-slate-300 text-[11px]">
+                  <span key={i} className={`px-2 py-0.5 rounded text-[11px] ${
+                    isDark ? 'bg-slate-800/60 text-slate-300' : 'bg-white border border-slate-200 text-slate-600'
+                  }`}>
                     {a}
                   </span>
                 ))}
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-500 font-medium flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 shrink-0" />
               <span>A verification request will be queued for Admin review automatically.</span>
             </div>
@@ -665,12 +741,18 @@ export const AddParkingSpacePage: React.FC = () => {
         )}
 
         {/* Navigation Actions */}
-        <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+        <div className={`pt-4 border-t flex items-center justify-between gap-3 ${
+          isDark ? 'border-slate-800' : 'border-slate-200'
+        }`}>
           {step > 1 ? (
             <button
               type="button"
               onClick={handleBack}
-              className="px-4 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5"
+              className={`px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                isDark 
+                  ? 'border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800' 
+                  : 'border-slate-200 text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50'
+              }`}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
@@ -683,7 +765,7 @@ export const AddParkingSpacePage: React.FC = () => {
             <button
               type="button"
               onClick={handleNext}
-              className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+              className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 cursor-pointer transition-all"
             >
               <span>Continue</span>
               <ArrowRight className="w-4 h-4" />
@@ -693,7 +775,7 @@ export const AddParkingSpacePage: React.FC = () => {
               type="button"
               disabled={isSubmitting}
               onClick={handleSubmit}
-              className="px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/30"
+              className="px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-sm flex items-center gap-2 shadow-xl shadow-emerald-500/30 cursor-pointer transition-all disabled:opacity-50"
             >
               {isSubmitting ? (
                 <span>Publishing...</span>

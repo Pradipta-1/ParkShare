@@ -21,8 +21,10 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export const EarningsPage: React.FC = () => {
+  const { isDark } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -213,9 +215,13 @@ export const EarningsPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/owner')}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 hover:border-emerald-500/40 text-xs font-semibold transition-all group shadow-sm cursor-pointer"
+          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all group shadow-sm cursor-pointer ${
+            isDark
+              ? 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-800 hover:border-emerald-500/40'
+              : 'bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border-slate-200 hover:border-emerald-500/40'
+          }`}
         >
-          <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-1 transition-transform" />
+          <ArrowLeft className="w-3.5 h-3.5 text-emerald-500 group-hover:-translate-x-1 transition-transform" />
           <span>Back to Host Overview</span>
         </button>
       </div>
@@ -223,13 +229,13 @@ export const EarningsPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">
             Finance & Settlements
           </span>
-          <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight mt-0.5">
+          <h1 className={`text-xl sm:text-3xl font-extrabold tracking-tight mt-0.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             Earnings & Payouts
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             Automated direct deposits deposited weekly into your registered bank account.
           </p>
         </div>
@@ -238,7 +244,11 @@ export const EarningsPage: React.FC = () => {
           <button
             type="button"
             onClick={handleDownloadStatement}
-            className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+            className={`flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+              isDark 
+                ? 'bg-slate-900 hover:bg-slate-800 text-slate-200 border-slate-700' 
+                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm'
+            }`}
           >
             <Download className="w-4 h-4" />
             <span>Statement (CSV)</span>
@@ -249,7 +259,7 @@ export const EarningsPage: React.FC = () => {
               type="button"
               disabled={isRequesting}
               onClick={handleRequestPayout}
-              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 cursor-pointer transition-all disabled:opacity-50"
             >
               <DollarSign className="w-4 h-4" />
               <span>{isRequesting ? 'Transferring...' : `Withdraw ₹${summary.pendingPayout}`}</span>
@@ -259,7 +269,7 @@ export const EarningsPage: React.FC = () => {
       </div>
 
       {payoutSuccessMsg && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{payoutSuccessMsg}</span>
         </div>
@@ -267,44 +277,54 @@ export const EarningsPage: React.FC = () => {
 
       {/* Top 4 Metrics (Requirement 25) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Total Earnings</span>
-          <div className="text-xl sm:text-3xl font-black text-white">₹{summary.totalEarnings.toLocaleString()}</div>
-          <span className="text-[10px] sm:text-[11px] text-emerald-400 font-semibold block truncate">Lifetime revenue</span>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border space-y-1 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Total Earnings</span>
+          <div className={`text-xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{summary.totalEarnings.toLocaleString()}</div>
+          <span className="text-[10px] sm:text-[11px] text-emerald-500 font-semibold block truncate">Lifetime revenue</span>
         </div>
 
-        <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">This Month</span>
-          <div className="text-xl sm:text-3xl font-black text-emerald-400">₹{summary.thisMonth.toLocaleString()}</div>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border space-y-1 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>This Month</span>
+          <div className="text-xl sm:text-3xl font-black text-emerald-500">₹{summary.thisMonth.toLocaleString()}</div>
           <span className={`text-[10px] sm:text-[11px] font-semibold flex items-center gap-1 ${
-            growthComparison.isPositive ? 'text-emerald-400' : 'text-rose-400'
+            growthComparison.isPositive ? 'text-emerald-500' : 'text-rose-500'
           }`}>
             <ArrowUpRight className={`w-3 h-3 ${growthComparison.isPositive ? '' : 'rotate-90'}`} />
             {growthComparison.diffText}
           </span>
         </div>
 
-        <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Pending Payout</span>
-          <div className="text-xl sm:text-3xl font-black text-amber-400">₹{summary.pendingPayout.toLocaleString()}</div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 block truncate">Due Friday</span>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border space-y-1 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Pending Payout</span>
+          <div className="text-xl sm:text-3xl font-black text-amber-500">₹{summary.pendingPayout.toLocaleString()}</div>
+          <span className={`text-[10px] sm:text-[11px] block truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Due Friday</span>
         </div>
 
-        <div className="p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-[#0f172a] border border-slate-800 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Paid Out</span>
-          <div className="text-xl sm:text-3xl font-black text-white">₹{summary.paidOut.toLocaleString()}</div>
-          <span className="text-[10px] sm:text-[11px] text-slate-400 block truncate">Settled to bank</span>
+        <div className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border space-y-1 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Paid Out</span>
+          <div className={`text-xl sm:text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>₹{summary.paidOut.toLocaleString()}</div>
+          <span className={`text-[10px] sm:text-[11px] block truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Settled to bank</span>
         </div>
       </div>
 
       {/* Monthly Revenue Trend Area Chart */}
-      <div className="p-6 rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4">
+      <div className={`p-6 rounded-3xl border space-y-4 ${
+        isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-white">Earnings Growth</h3>
-            <p className="text-xs text-slate-400">Gross revenue generated across all parking spaces</p>
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Earnings Growth</h3>
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Gross revenue generated across all parking spaces</p>
           </div>
-          <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+          <span className="text-xs font-mono font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
             {monthlyGrowth.length > 0
               ? `${monthlyGrowth[monthlyGrowth.length - 1].month}: ₹${(monthlyGrowth[monthlyGrowth.length - 1].amount || 0).toLocaleString()}`
               : 'Live Monthly Velocity'}
@@ -320,14 +340,16 @@ export const EarningsPage: React.FC = () => {
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="month" stroke="#64748b" fontSize={11} tickLine={false} />
-              <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
+              <XAxis dataKey="month" stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={11} tickLine={false} />
+              <YAxis stroke={isDark ? '#64748b' : '#94a3b8'} fontSize={11} tickLine={false} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  borderColor: '#334155',
+                  backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                  borderColor: isDark ? '#334155' : '#e2e8f0',
                   borderRadius: '12px',
                   fontSize: '12px',
+                  color: isDark ? '#ffffff' : '#0f172a',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                 }}
               />
               <Area
@@ -346,57 +368,63 @@ export const EarningsPage: React.FC = () => {
       {/* Payout History & Bank Details */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Payout History Table (8 cols) */}
-        <div className="lg:col-span-8 p-6 rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4">
-          <h3 className="text-base font-bold text-white">Settlement History</h3>
+        <div className={`lg:col-span-8 p-6 rounded-3xl border space-y-4 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
+          <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Settlement History</h3>
 
-          <div className="divide-y divide-slate-800/80">
+          <div className={`divide-y ${isDark ? 'divide-slate-800/80' : 'divide-slate-100'}`}>
             {payouts.map((item) => (
               <div key={item.id} className="py-3.5 flex items-center justify-between gap-4 text-xs">
                 <div className="space-y-0.5">
-                  <div className="font-bold text-white flex items-center gap-2">
+                  <div className={`font-bold flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     <span>₹{item.amount.toLocaleString()}</span>
                     <span
                       className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                         item.status === 'completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                       }`}
                     >
                       {item.status}
                     </span>
                   </div>
-                  <p className="text-slate-400">{item.method}</p>
+                  <p className={isDark ? 'text-slate-400' : 'text-slate-500'}>{item.method}</p>
                 </div>
-                <span className="text-slate-500 font-mono">{item.date}</span>
+                <span className={`font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{item.date}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Linked Settlement Bank Account (4 cols) */}
-        <div className="lg:col-span-4 p-6 rounded-3xl bg-[#0f172a] border border-slate-800 space-y-4">
+        <div className={`lg:col-span-4 p-6 rounded-3xl border space-y-4 ${
+          isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
           <div className="flex items-center gap-2">
-            <Building className="w-5 h-5 text-blue-400" />
-            <h3 className="text-base font-bold text-white">Linked Bank</h3>
+            <Building className="w-5 h-5 text-blue-500" />
+            <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Linked Bank</h3>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+          <div className={`p-4 rounded-2xl border space-y-3 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}>
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-500 block">Bank Name</span>
-              <span className="text-sm font-bold text-white">HDFC Bank Ltd</span>
+              <span className={`text-[10px] font-bold uppercase block ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Bank Name</span>
+              <span className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>HDFC Bank Ltd</span>
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-500 block">Account Number</span>
-              <span className="font-mono text-white text-xs">•••• •••• •••• 4921</span>
+              <span className={`text-[10px] font-bold uppercase block ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>Account Number</span>
+              <span className={`font-mono text-xs ${isDark ? 'text-white' : 'text-slate-900'}`}>•••• •••• •••• 4921</span>
             </div>
             <div>
-              <span className="text-[10px] font-bold uppercase text-slate-500 block">IFSC Code</span>
-              <span className="font-mono text-emerald-400 text-xs font-semibold">HDFC0000245</span>
+              <span className={`text-[10px] font-bold uppercase block ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>IFSC Code</span>
+              <span className="font-mono text-emerald-500 text-xs font-semibold">HDFC0000245</span>
             </div>
           </div>
 
-          <div className="text-[11px] text-slate-400 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className={`text-[11px] flex items-center gap-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>Bank account verified for instant automated NEFT / IMPS payouts.</span>
           </div>
         </div>

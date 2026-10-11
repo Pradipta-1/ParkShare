@@ -54,30 +54,46 @@
   animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Leaflet dark theme tweaks - Hardware accelerated, zero CSS filter lag */
+/* Leaflet map styles with theme adaptation */
 .leaflet-container {
-  background: #0b0f17 !important;
+  background: #f1f5f9 !important;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   outline: none;
   contain: layout paint;
 }
 
+html.dark .leaflet-container {
+  background: #0b0f17 !important;
+}
+
 /* High-contrast Dark Mode Street Navigation tiles with hardware acceleration */
-.street-nav-dark-tiles {
+html.dark .street-nav-dark-tiles {
   filter: brightness(0.85) invert(1) contrast(1.18) hue-rotate(190deg) saturate(0.35) brightness(0.82) !important;
   transform: translateZ(0);
 }
 
+html:not(.dark) .street-nav-dark-tiles {
+  filter: saturate(1.05) contrast(1.02) !important;
+  transform: translateZ(0);
+}
+
 .leaflet-popup-content-wrapper {
-  background: rgba(13, 19, 31, 0.95) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  color: #f1f5f9 !important;
+  color: #0f172a !important;
   border-radius: 18px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   padding: 0 !important;
   overflow: hidden;
+}
+
+html.dark .leaflet-popup-content-wrapper {
+  background: rgba(13, 19, 31, 0.95) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(16, 185, 129, 0.15) !important;
 }
 
 .leaflet-popup-content {
@@ -86,6 +102,11 @@
 }
 
 .leaflet-popup-tip {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+html.dark .leaflet-popup-tip {
   background: rgba(13, 19, 31, 0.95) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
 }

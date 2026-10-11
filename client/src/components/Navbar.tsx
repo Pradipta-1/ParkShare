@@ -103,34 +103,34 @@ export const Navbar: React.FC = () => {
       className={`sticky top-0 z-50 transition-all duration-300 ${
         isDark
           ? isScrolled
-            ? 'bg-[#0b0f17]/90 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-black/30 py-3'
-            : 'bg-[#0b0f17]/60 backdrop-blur-sm border-b border-slate-800/40 py-4'
+            ? 'bg-[#0b0f17]/90 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-black/30 py-2 sm:py-3'
+            : 'bg-[#0b0f17]/60 backdrop-blur-sm border-b border-slate-800/40 py-2.5 sm:py-4'
           : isScrolled
-            ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-md shadow-slate-900/5 py-3'
-            : 'bg-white/85 backdrop-blur-sm border-b border-slate-200/60 py-4'
+            ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-md shadow-slate-900/5 py-2 sm:py-3'
+            : 'bg-white/85 backdrop-blur-sm border-b border-slate-200/60 py-2.5 sm:py-4'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-2">
           {/* Logo */}
-          <Link to={getLogoDestination()} className="flex items-center gap-2.5 group">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <span className="font-extrabold text-white text-xl tracking-tight flex items-center">
+          <Link to={getLogoDestination()} className="flex items-center gap-2 sm:gap-2.5 group shrink-0">
+            <div className="relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              <span className="font-extrabold text-white text-base sm:text-xl tracking-tight flex items-center">
                 P
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-900 ml-0.5"></span>
               </span>
-              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
+              <div className="absolute -top-1 -right-1 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-400 animate-ping opacity-75"></div>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className={`text-xl font-bold tracking-tight transition-colors ${isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'}`}>
+                <span className={`text-base sm:text-xl font-bold tracking-tight transition-colors ${isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'}`}>
                   Park<span className="text-emerald-500">Share</span>
                 </span>
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tracking-wider">
+                <span className="text-[9px] sm:text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 tracking-wider">
                   Live
                 </span>
               </div>
-              <span className={`text-[10px] -mt-1 hidden sm:inline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>P2P Smart Mobility</span>
+              <span className={`text-[10px] -mt-0.5 sm:-mt-1 hidden sm:inline ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>P2P Smart Mobility</span>
             </div>
           </Link>
 
@@ -140,9 +140,9 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Optimized Light / Dark Theme Switcher */}
-            <ThemeToggle />
+            <ThemeToggle className="scale-90 sm:scale-100" />
 
             {/* Notification Center Bell - Hidden on Landing Page */}
             {user && location.pathname !== '/' && (
@@ -357,21 +357,21 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <Link
                   to="/login?mode=signin"
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg sm:rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap ${
                     isDark ? 'text-slate-200 hover:text-white hover:bg-slate-800/60' : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   }`}
                 >
                   <span>Log in</span>
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                  <span className="hidden sm:inline-block text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                     Testing accounts
                   </span>
                 </Link>
                 <Link
                   to="/login?mode=signup"
-                  className="px-4 py-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl transition-all shadow-md shadow-emerald-500/20"
+                  className="px-3 sm:px-4 py-1.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg sm:rounded-xl transition-all shadow-md shadow-emerald-500/20 whitespace-nowrap"
                 >
                   Sign up
                 </Link>

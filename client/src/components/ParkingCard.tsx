@@ -85,7 +85,7 @@ export const ParkingCard: React.FC<ParkingCardProps> = ({
       className={`group relative rounded-2xl backdrop-blur-md border transition-all duration-300 overflow-hidden ${
         isDark
           ? 'bg-[#0f172a]/80 hover:shadow-2xl hover:shadow-emerald-950/20'
-          : 'bg-white hover:shadow-xl hover:shadow-slate-900/10'
+          : 'bg-white shadow-xs hover:shadow-xl hover:shadow-slate-200/80'
       } ${
         isSelected
           ? isAllotted
@@ -93,7 +93,7 @@ export const ParkingCard: React.FC<ParkingCardProps> = ({
             : 'border-emerald-500 ring-2 ring-emerald-500/30 -translate-y-1'
           : isDark
           ? 'border-slate-800/80 hover:border-slate-700 hover:-translate-y-1'
-          : 'border-slate-200 hover:border-slate-300 hover:-translate-y-1'
+          : 'border-slate-200/90 hover:border-emerald-500/40 hover:-translate-y-1'
       } ${isHorizontal ? 'flex flex-col sm:flex-row' : 'flex flex-col'}`}
     >
       {/* Image container */}
