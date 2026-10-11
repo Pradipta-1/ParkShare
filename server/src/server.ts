@@ -1,7 +1,10 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import routes from './routes/index.js';
 import { dbStore } from './store/dbStore.js';
 
@@ -21,10 +24,6 @@ app.use(express.urlencoded({ extended: true }));
 
 let lastMongoError: string | null = null;
 
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -36,7 +35,7 @@ const clientDistCandidates = [
 const clientDist = clientDistCandidates.find((dir) => fs.existsSync(dir));
 
 // Health / Test Routes
-app.get('/api/test', (_req, res) => {
+app.get('/api/test', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Backend API is running and connected with MongoDB Atlas!',
@@ -46,7 +45,7 @@ app.get('/api/test', (_req, res) => {
   });
 });
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
@@ -71,26 +70,26 @@ app.use('/api', routes);
 // Serve Frontend or fallback
 if (clientDist) {
   app.use(express.static(clientDist));
-  app.get('*', (_req, res) => {
+  app.get('*', (_req: Request, res: Response) => {
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {
-  app.get('/', (_req, res) => {
+  app.get('/', (_req: Request, res: Response) => {
     res.send('ParkShare Backend API is running!');
   });
-  app.use('*', (_req, res) => {
+  app.use('*', (_req: Request, res: Response) => {
     res.status(404).json({ success: false, message: 'Resource not found' });
   });
 }
 
 // MongoDB connection event monitoring
-mongoose.connection.on('disconnected', () => {
+(mongoose.connection as any).on('disconnected', () => {
   console.warn('⚠️ MongoDB connection lost/disconnected.');
 });
 
-mongoose.connection.on('error', (err) => {
-  lastMongoError = err.message;
-  console.error('⚠️ MongoDB connection error:', err.message);
+(mongoose.connection as any).on('error', (err: any) => {
+  lastMongoError = err?.message || 'Database error';
+  console.error('⚠️ MongoDB connection error:', lastMongoError);
 });
 
 // Clean & sanitize MongoDB URI (removes accidental newlines/spaces/quotes when pasted into Render)
@@ -105,7 +104,7 @@ if (mongoUri) {
   mongoose
     .connect(mongoUri, {
       serverSelectionTimeoutMS: 10000,
-    })
+    } as any)
     .then(async () => {
       lastMongoError = null;
       console.log(` Connected to MongoDB Atlas successfully! Database: [${mongoose.connection.name}]`);
