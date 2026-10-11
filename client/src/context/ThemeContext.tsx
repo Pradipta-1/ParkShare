@@ -18,13 +18,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (saved === 'light' || saved === 'dark') {
         return saved;
       }
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        return 'light';
-      }
     } catch {
-      // Fallback to dark
+      // Storage unavailable
     }
-    return 'dark';
+    return 'light';
   });
 
   const applyTheme = (targetTheme: Theme) => {
