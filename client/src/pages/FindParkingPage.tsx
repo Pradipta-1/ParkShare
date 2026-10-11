@@ -85,23 +85,43 @@ export const FindParkingPage: React.FC = () => {
   const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
-  const [mobileSheetState, setMobileSheetState] = useState<'peek' | 'half' | 'full'>('peek');
+  const [isSheetExpanded, setIsSheetExpanded] = useState<boolean>(false);
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const initialHeightRef = useRef<number>(128);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartYRef.current = e.touches[0].clientY;
+    const currentMax = window.innerHeight * 0.88;
+    initialHeightRef.current = isSheetExpanded ? currentMax : 128;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartYRef.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const delta = touchStartYRef.current - currentY;
+    const currentMax = window.innerHeight * 0.88;
+    const targetHeight = Math.max(128, Math.min(currentMax, initialHeightRef.current + delta));
+    setDragHeight(targetHeight);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartYRef.current === null) return;
-    const diff = touchStartYRef.current - e.changedTouches[0].clientY;
-    if (diff > 35) {
+    const endY = e.changedTouches[0].clientY;
+    const delta = touchStartYRef.current - endY;
+    const currentMax = window.innerHeight * 0.88;
+    const midpoint = (128 + currentMax) / 2;
+
+    if (delta > 35) {
       // Swiped UP
-      setMobileSheetState((curr) => (curr === 'peek' ? 'half' : 'full'));
-    } else if (diff < -35) {
+      setIsSheetExpanded(true);
+    } else if (delta < -35) {
       // Swiped DOWN
-      setMobileSheetState((curr) => (curr === 'full' ? 'half' : 'peek'));
+      setIsSheetExpanded(false);
+    } else if (dragHeight !== null) {
+      setIsSheetExpanded(dragHeight > midpoint);
     }
+    setDragHeight(null);
     touchStartYRef.current = null;
   };
 
@@ -327,7 +347,7 @@ export const FindParkingPage: React.FC = () => {
     if (space?.location) {
       setMapCenter([space.location.lat, space.location.lng]);
     }
-    setMobileSheetState('half');
+    setIsSheetExpanded(true);
   }, []);
 
   const handleReserveSpace = useCallback((space: ParkingSpace) => {
@@ -832,10 +852,8 @@ export const FindParkingPage: React.FC = () => {
                 ? 'bg-[#090e1a]/90 border-slate-700/80 text-emerald-400 hover:bg-slate-800'
                 : 'bg-white/95 border-slate-200 text-emerald-700 hover:bg-slate-50'
             } ${
-              mobileSheetState === 'full'
+              isSheetExpanded
                 ? 'bottom-[90vh]'
-                : mobileSheetState === 'half'
-                ? 'bottom-[56vh]'
                 : 'bottom-36'
             }`}
             title="Locate Me"
@@ -862,24 +880,20 @@ export const FindParkingPage: React.FC = () => {
 
         {/* MOBILE GOOGLE MAPS SLIDING BOTTOM SHEET */}
         <div
-          className={`md:hidden fixed inset-x-0 bottom-0 z-30 transition-all duration-300 ease-out backdrop-blur-2xl border-t flex flex-col rounded-t-[28px] overflow-hidden ${
+          style={dragHeight !== null ? { height: `${dragHeight}px`, transition: 'none' } : undefined}
+          className={`md:hidden fixed inset-x-0 bottom-0 z-30 transition-[height] duration-300 ease-out backdrop-blur-2xl border-t flex flex-col rounded-t-[28px] overflow-hidden ${
             isDark
               ? 'bg-[#080d19]/96 border-slate-700/80 shadow-[0_-16px_50px_rgba(0,0,0,0.85)] text-white'
               : 'bg-white/98 border-slate-200 shadow-[0_-16px_50px_rgba(0,0,0,0.15)] text-slate-900'
-          } ${
-            mobileSheetState === 'peek'
-              ? 'h-32'
-              : mobileSheetState === 'half'
-              ? 'h-[54vh]'
-              : 'h-[88vh]'
-          }`}
+          } ${dragHeight !== null ? '' : isSheetExpanded ? 'h-[88vh]' : 'h-32'}`}
         >
           {/* Top Drag Bar & Handle (Swipe only for mobile devices) */}
           <div
-            className={`w-full pt-2.5 pb-2 px-4 flex flex-col items-center select-none shrink-0 border-b ${
+            className={`w-full pt-3 pb-2.5 px-4 flex flex-col items-center select-none shrink-0 border-b touch-none ${
               isDark ? 'border-slate-800/60' : 'border-slate-100'
             }`}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <div className={`w-12 h-1.5 rounded-full mb-2 ${
@@ -918,15 +932,8 @@ export const FindParkingPage: React.FC = () => {
                 )}
               </div>
 
-              <div className={`flex items-center gap-1.5 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                <span className="text-[11px] font-semibold">
-                  {mobileSheetState === 'peek'
-                    ? 'Expand'
-                    : mobileSheetState === 'half'
-                    ? 'More'
-                    : 'Collapse'}
-                </span>
-                {mobileSheetState === 'full' ? (
+              <div className={`flex items-center shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                {isSheetExpanded ? (
                   <ChevronDown className="w-4 h-4 text-slate-400" />
                 ) : (
                   <ChevronUp className="w-4 h-4 text-emerald-500" />
@@ -1071,8 +1078,8 @@ export const FindParkingPage: React.FC = () => {
               </div>
             )}
 
-            {/* Horizontal swipeable cards preview when sheet is in peek/half mode and no space selected */}
-            {mobileSheetState === 'peek' && !selectedSpace && (
+            {/* Horizontal swipeable cards preview when sheet is in minimized mode and no space selected */}
+            {!isSheetExpanded && !selectedSpace && (
               <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory">
                 {sortedSpaces.slice(0, 10).map((space) => {
                   const isAvail = (space.availableSpots ?? 1) > 0 && space.status !== 'allotted';
@@ -1124,8 +1131,8 @@ export const FindParkingPage: React.FC = () => {
               </div>
             )}
 
-            {/* Full vertical list when expanded into half or full mode */}
-            {(mobileSheetState === 'half' || mobileSheetState === 'full') && (
+            {/* Full vertical list when expanded into full mode */}
+            {isSheetExpanded && (
               <div className="space-y-3 pt-1">
                 <div className="flex items-center justify-between text-xs text-slate-400 px-1">
                   <span>Available Parking Spots ({sortedSpaces.length})</span>
